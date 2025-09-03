@@ -19,10 +19,22 @@ class LanguageHelperDB:
         self.collection_name = os.getenv("QDRANT_COLLECTION_NAME", "language_helper_history")
         
         # Inicjalizacja klienta Qdrant
-        if self.qdrant_api_key:
-            self.client = QdrantClient(url=self.qdrant_url, api_key=self.qdrant_api_key)
-        else:
-            self.client = QdrantClient(url=self.qdrant_url)
+        try:
+            if self.qdrant_api_key:
+                self.client = QdrantClient(
+                    url=self.qdrant_url, 
+                    api_key=self.qdrant_api_key,
+                    timeout=60.0  # Dodaj timeout
+                )
+            else:
+                self.client = QdrantClient(
+                    url=self.qdrant_url,
+                    timeout=60.0  # Dodaj timeout
+                )
+            print(f"✅ Połączenie z Qdrant: {self.qdrant_url}")
+        except Exception as e:
+            print(f"❌ Błąd podczas łączenia z Qdrant: {str(e)}")
+            self.client = None
         
         # Utworzenie kolekcji jeśli nie istnieje
         self._create_collection_if_not_exists()

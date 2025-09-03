@@ -16,6 +16,6 @@ tenacity
 typer
 ffmpeg-python==0.2.0
 pydub==0.25.1
-qdrant-client==1.7.0
+qdrant-client>=1.8.0,<2.0.0
 python-docx==1.1.0
 PyPDF2==3.0.1
