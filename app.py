@@ -17,8 +17,13 @@ load_dotenv()
 # Konfiguracja OpenAI - tylko jeśli klucz API jest dostępny
 client = None
 api_key = os.getenv("OPENAI_API_KEY")
-if api_key:
-    client = openai.OpenAI(api_key=api_key)
+if api_key and api_key.strip():  # Sprawdź czy nie jest None i nie jest pustym stringiem
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        print("✅ Klient OpenAI zainicjalizowany poprawnie")
+    except Exception as e:
+        print(f"❌ Błąd podczas inicjalizacji klienta OpenAI: {e}")
+        client = None
 else:
     print("❌ Błąd: Brak klucza API OpenAI w zmiennych środowiskowych")
 
