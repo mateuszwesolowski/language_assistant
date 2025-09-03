@@ -7,8 +7,9 @@ load_dotenv()
 
 # Konfiguracja OpenAI - tylko jeśli klucz API jest dostępny
 client = None
-if os.getenv("OPENAI_API_KEY"):
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+if api_key:
+    client = openai.OpenAI(api_key=api_key)
 
 def correct_text(text, language="angielski"):
     """
