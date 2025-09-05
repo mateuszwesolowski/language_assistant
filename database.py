@@ -63,6 +63,10 @@ class LanguageHelperDB:
     
     def save_translation(self, input_text, output_text, target_language, mode="translation", audio_data=None, voice=None):
         """Zapisuje tłumaczenie do bazy danych"""
+        if not self.client:
+            print("❌ Błąd: Brak połączenia z bazą danych Qdrant")
+            return None
+        
         try:
             # Generowanie unikalnego ID
             point_id = str(uuid.uuid4())
@@ -105,6 +109,10 @@ class LanguageHelperDB:
     
     def save_correction(self, input_text, output_text, explanation, language, mode="correction", analysis_data=None):
         """Zapisuje poprawkę lub analizę do bazy danych"""
+        if not self.client:
+            print("❌ Błąd: Brak połączenia z bazą danych Qdrant")
+            return None
+        
         try:
             # Generowanie unikalnego ID
             point_id = str(uuid.uuid4())

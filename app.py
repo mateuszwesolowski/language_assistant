@@ -812,24 +812,27 @@ def main():
                                     voice=voice
                                 )
                                 
-                                # Dodaj do sesji
-                                translation_item = {
-                                    'id': db_id,
-                                    'timestamp': datetime.now(),
-                                    'input': input_text,
-                                    'output': result,
-                                    'target_language': target_language,
-                                    'mode': 'translation',
-                                    'audio_data': audio_data,
-                                    'voice': voice
-                                }
-                                st.session_state.translation_history.append(translation_item)
-                                # Ustaw aktualny wynik sesji
-                                st.session_state.current_session_action = translation_item
-                                # Odśwież dane z bazy danych
-                                reload_data_from_db()
-                                st.success(SUCCESS_MESSAGES["translation_saved"])
-                                st.rerun()
+                                if db_id:
+                                    # Dodaj do sesji tylko jeśli zapisanie do bazy się powiodło
+                                    translation_item = {
+                                        'id': db_id,
+                                        'timestamp': datetime.now(),
+                                        'input': input_text,
+                                        'output': result,
+                                        'target_language': target_language,
+                                        'mode': 'translation',
+                                        'audio_data': audio_data,
+                                        'voice': voice
+                                    }
+                                    st.session_state.translation_history.append(translation_item)
+                                    # Ustaw aktualny wynik sesji
+                                    st.session_state.current_session_action = translation_item
+                                    # Odśwież dane z bazy danych
+                                    reload_data_from_db()
+                                    st.success(SUCCESS_MESSAGES["translation_saved"])
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Nie udało się zapisać tłumaczenia do bazy danych. Sprawdź połączenie z Qdrant.")
                         elif "Poprawianie" in mode:
                             corrected = correct_text(input_text, target_language)
                             if corrected:
@@ -843,23 +846,26 @@ def main():
                                     mode='correction'
                                 )
                                 
-                                # Dodaj do sesji
-                                correction_item = {
-                                    'id': db_id,
-                                    'timestamp': datetime.now(),
-                                    'input': input_text,
-                                    'output': corrected,
-                                    'explanation': explanation,
-                                    'language': target_language,
-                                    'mode': 'correction'
-                                }
-                                st.session_state.correction_history.append(correction_item)
-                                # Ustaw aktualny wynik sesji
-                                st.session_state.current_session_action = correction_item
-                                # Odśwież dane z bazy danych
-                                reload_data_from_db()
-                                st.success(SUCCESS_MESSAGES["correction_saved"])
-                                st.rerun()
+                                if db_id:
+                                    # Dodaj do sesji tylko jeśli zapisanie do bazy się powiodło
+                                    correction_item = {
+                                        'id': db_id,
+                                        'timestamp': datetime.now(),
+                                        'input': input_text,
+                                        'output': corrected,
+                                        'explanation': explanation,
+                                        'language': target_language,
+                                        'mode': 'correction'
+                                    }
+                                    st.session_state.correction_history.append(correction_item)
+                                    # Ustaw aktualny wynik sesji
+                                    st.session_state.current_session_action = correction_item
+                                    # Odśwież dane z bazy danych
+                                    reload_data_from_db()
+                                    st.success(SUCCESS_MESSAGES["correction_saved"])
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Nie udało się zapisać poprawki do bazy danych. Sprawdź połączenie z Qdrant.")
                         elif "Analiza" in mode:
                             try:
                                 analysis = analyze_text(input_text, target_language)
