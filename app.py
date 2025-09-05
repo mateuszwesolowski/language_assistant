@@ -100,7 +100,25 @@ def load_data_from_db(force_reload=False):
 
 def reload_data_from_db():
     """Ponownie ładuje dane z bazy danych do sesji"""
-    load_data_from_db(force_reload=True)
+    from constants import DEFAULT_HISTORY_LIMIT
+    
+    try:
+        # ZAWSZE pobierz najnowsze dane z bazy danych
+        translations = db.get_translations(limit=DEFAULT_HISTORY_LIMIT)
+        st.session_state.translation_history = translations
+        
+        corrections = db.get_corrections(limit=DEFAULT_HISTORY_LIMIT)
+        st.session_state.correction_history = corrections
+        
+        chat_sessions = db.get_chat_sessions(limit=DEFAULT_HISTORY_LIMIT)
+        st.session_state.chat_sessions_history = chat_sessions
+        
+        tips_history = db.get_learning_tips_history(limit=DEFAULT_HISTORY_LIMIT)
+        st.session_state.tips_history = tips_history
+        
+        print(f"✅ Ponownie załadowano {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
+    except Exception as e:
+        print(f"❌ Błąd podczas ponownego ładowania danych z bazy: {str(e)}")
 
 def translate_text(text, target_language="angielski"):
     """
@@ -808,6 +826,8 @@ def main():
                                 st.session_state.translation_history.append(translation_item)
                                 # Ustaw aktualny wynik sesji
                                 st.session_state.current_session_action = translation_item
+                                # Odśwież dane z bazy danych
+                                reload_data_from_db()
                                 st.success(SUCCESS_MESSAGES["translation_saved"])
                         elif "Poprawianie" in mode:
                             corrected = correct_text(input_text, target_language)
@@ -835,6 +855,8 @@ def main():
                                 st.session_state.correction_history.append(correction_item)
                                 # Ustaw aktualny wynik sesji
                                 st.session_state.current_session_action = correction_item
+                                # Odśwież dane z bazy danych
+                                reload_data_from_db()
                                 st.success(SUCCESS_MESSAGES["correction_saved"])
                         elif "Analiza" in mode:
                             try:
@@ -862,6 +884,8 @@ def main():
                                     st.session_state.correction_history.append(analysis_item)
                                     # Ustaw aktualny wynik sesji
                                     st.session_state.current_session_action = analysis_item
+                                    # Odśwież dane z bazy danych
+                                    reload_data_from_db()
                                     st.success(SUCCESS_MESSAGES["analysis_saved"])
                                 else:
                                     st.error("❌ Nie udało się przeanalizować tekstu. Sprawdź czy tekst jest wystarczająco długi.")
