@@ -908,6 +908,7 @@ def main():
                 else:
                     st.warning("⚠️ Wprowadź tekst do przetworzenia.")
         
+        
         with col2:
             st.subheader("🎯 Wynik")
         
@@ -1099,79 +1100,78 @@ def main():
                         st.info(f"👈 Wprowadź tekst w języku {target_language} i kliknij 'Analizuj tekst' aby zobaczyć analizę z wyjaśnieniami po polsku. Historia analiz jest dostępna poniżej.")
                 else:
                     st.info("👈 Wprowadź tekst i kliknij przycisk aby zobaczyć wynik.")
-    
-    # Historia - pokazuj tylko historię odpowiednią dla danego trybu
-    if "Tłumaczenie" in mode:
-        # Historia tłumaczeń
-        if st.session_state.translation_history:
-            st.markdown("---")
-            st.subheader("📚 Historia tłumaczeń")
-            
-            # Wyświetl wszystkie tłumaczenia
-            for i, item in enumerate(reversed(st.session_state.translation_history)):
-                if item['mode'] == 'translation':
-                    with st.expander(f"Tłumaczenie {len(st.session_state.translation_history) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
-                        # Przycisk usuwania
-                        col_delete, col_content = st.columns([1, 10])
-                        with col_delete:
-                            delete_key = f"delete_translation_{item.get('id', i)}_{i}"
-                            
-                            if st.button("🗑️", key=delete_key, help="Usuń z bazy danych (natychmiastowe)"):
-                                if 'id' in item:
-                                    if db.delete_item(item['id']):
-                                        st.session_state.translation_history.remove(item)
-                                        st.success("✅ Usunięto z bazy danych!")
+        
+        # Historia - pokazuj tylko historię odpowiednią dla danego trybu
+        if "Tłumaczenie" in mode:
+            # Historia tłumaczeń - tylko w sekcji tłumaczeń
+            if st.session_state.translation_history:
+                st.markdown("---")
+                st.subheader("📚 Historia tłumaczeń")
+                
+                # Wyświetl wszystkie tłumaczenia
+                for i, item in enumerate(reversed(st.session_state.translation_history)):
+                    if item['mode'] == 'translation':
+                        with st.expander(f"Tłumaczenie {len(st.session_state.translation_history) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
+                            # Przycisk usuwania
+                            col_delete, col_content = st.columns([1, 10])
+                            with col_delete:
+                                delete_key = f"delete_translation_{item.get('id', i)}_{i}"
+                                
+                                if st.button("🗑️", key=delete_key, help="Usuń z bazy danych (natychmiastowe)"):
+                                    if 'id' in item:
+                                        if db.delete_item(item['id']):
+                                            st.session_state.translation_history.remove(item)
+                                            st.success("✅ Usunięto z bazy danych!")
+                                        else:
+                                            st.error("❌ Błąd podczas usuwania z bazy danych")
                                     else:
-                                        st.error("❌ Błąd podczas usuwania z bazy danych")
-                                else:
-                                    # Usuń tylko z sesji jeśli nie ma ID
-                                    st.session_state.translation_history.remove(item)
-                                    st.success("✅ Usunięto z historii!")
-                        with col_content:
-                            col_a, col_b = st.columns(2)
-                            with col_a:
-                                st.markdown("**Oryginalny:**")
-                                st.write(item['input'])
-                            with col_b:
-                                st.markdown(f"**Przetłumaczony ({item['target_language']}):**")
-                                st.write(item['output'])
-                        
-                        # Wyświetl audio jeśli jest dostępne
-                        if 'audio_data' in item and item['audio_data']:
-                            st.markdown("**🔊 Audio:**")
-                            st.info(f"Głos: {item.get('voice', 'alloy')}")
+                                        # Usuń tylko z sesji jeśli nie ma ID
+                                        st.session_state.translation_history.remove(item)
+                                        st.success("✅ Usunięto z historii!")
+                            with col_content:
+                                col_a, col_b = st.columns(2)
+                                with col_a:
+                                    st.markdown("**Oryginalny:**")
+                                    st.write(item['input'])
+                                with col_b:
+                                    st.markdown(f"**Przetłumaczony ({item['target_language']}):**")
+                                    st.write(item['output'])
                             
-                            # Zapisz audio do pliku tymczasowego
-                            import tempfile
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-                                temp_file.write(item['audio_data'])
-                                temp_file_path = temp_file.name
-                            
-                            # Wyświetl audio
-                            st.audio(temp_file_path, format="audio/wav")
-                            
-                            # Przycisk pobierania
-                            st.download_button(
-                                label="📥 Pobierz audio",
-                                data=item['audio_data'],
-                                file_name=f"translation_{item['timestamp'].strftime('%Y%m%d_%H%M%S')}.wav",
-                                mime="audio/wav",
-                                key=f"download_history_{item['timestamp'].strftime('%Y%m%d_%H%M%S')}_{i}"
-                            )
-                        else:
-                            st.info("🔇 Audio nie jest dostępne dla tego tłumaczenia")
-    
-    elif "Poprawianie" in mode:
-        # Historia poprawek
-        st.markdown("---")
-        st.subheader("🔧 Historia poprawek")
+                            # Wyświetl audio jeśli jest dostępne
+                            if 'audio_data' in item and item['audio_data']:
+                                st.markdown("**🔊 Audio:**")
+                                st.info(f"Głos: {item.get('voice', 'alloy')}")
+                                
+                                # Zapisz audio do pliku tymczasowego
+                                import tempfile
+                                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+                                    temp_file.write(item['audio_data'])
+                                    temp_file_path = temp_file.name
+                                
+                                # Wyświetl audio
+                                st.audio(temp_file_path, format="audio/wav")
+                                
+                                # Przycisk pobierania
+                                st.download_button(
+                                    label="📥 Pobierz audio",
+                                    data=item['audio_data'],
+                                    file_name=f"translation_{item['timestamp'].strftime('%Y%m%d_%H%M%S')}.wav",
+                                    mime="audio/wav",
+                                    key=f"download_history_{item['timestamp'].strftime('%Y%m%d_%H%M%S')}_{i}"
+                                )
+                            else:
+                                st.info("🔇 Audio nie jest dostępne dla tego tłumaczenia")
         
-        
-        if st.session_state.correction_history:
-            # Filtruj tylko poprawki i wyświetl wszystkie
-            correction_items = [item for item in st.session_state.correction_history if item.get('mode') == 'correction']
-            for i, item in enumerate(reversed(correction_items)):
-                    with st.expander(f"Poprawka {len(st.session_state.correction_history) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
+        elif "Poprawianie" in mode:
+            # Historia poprawek - tylko w sekcji poprawek
+            if st.session_state.correction_history:
+                st.markdown("---")
+                st.subheader("🔧 Historia poprawek")
+                
+                # Filtruj tylko poprawki i wyświetl wszystkie
+                correction_items = [item for item in st.session_state.correction_history if item.get('mode') == 'correction']
+                for i, item in enumerate(reversed(correction_items)):
+                    with st.expander(f"Poprawka {len(correction_items) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
                         # Przycisk usuwania
                         col_delete, col_content = st.columns([1, 10])
                         with col_delete:
@@ -1199,18 +1199,17 @@ def main():
                             
                             st.markdown("**Wyjaśnienie poprawek:**")
                             st.write(item['explanation'])
-    
-    elif "Analiza" in mode:
-        # Historia analiz
-        st.markdown("---")
-        st.subheader("📊 Historia analiz")
         
-        
-        if st.session_state.correction_history:
-            # Filtruj tylko analizy i wyświetl wszystkie
-            analysis_items = [item for item in st.session_state.correction_history if item.get('mode') == 'analysis']
-            for i, item in enumerate(reversed(analysis_items)):
-                    with st.expander(f"Analiza {len(st.session_state.correction_history) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
+        elif "Analiza" in mode:
+            # Historia analiz - tylko w sekcji analiz
+            if st.session_state.correction_history:
+                st.markdown("---")
+                st.subheader("📊 Historia analiz")
+                
+                # Filtruj tylko analizy i wyświetl wszystkie
+                analysis_items = [item for item in st.session_state.correction_history if item.get('mode') == 'analysis']
+                for i, item in enumerate(reversed(analysis_items)):
+                    with st.expander(f"Analiza {len(analysis_items) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
                         # Przycisk usuwania
                         col_delete, col_content = st.columns([1, 10])
                         with col_delete:
@@ -1265,6 +1264,8 @@ def main():
                                         st.write(f"• {tip}")
                             else:
                                 st.info("📊 Analiza nie jest dostępna dla tego wpisu")
+    
+    # Historia jest teraz wyświetlana w każdej sekcji osobno
     
 
     
