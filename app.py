@@ -1107,8 +1107,8 @@ def main():
             st.markdown("---")
             st.subheader("📚 Historia tłumaczeń")
             
-            # Wyświetl ostatnie 5 tłumaczeń
-            for i, item in enumerate(reversed(st.session_state.translation_history[-5:])):
+            # Wyświetl wszystkie tłumaczenia
+            for i, item in enumerate(reversed(st.session_state.translation_history)):
                 if item['mode'] == 'translation':
                     with st.expander(f"Tłumaczenie {len(st.session_state.translation_history) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
                         # Przycisk usuwania
