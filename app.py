@@ -379,7 +379,7 @@ def main():
                     st.subheader("📚 Archiwum wskazówek do nauki")
                     
                     if st.session_state.tips_history:
-                        for i, tip_item in enumerate(st.session_state.tips_history[:5]):  # Pokaż ostatnie 5
+                        for i, tip_item in enumerate(st.session_state.tips_history):  # Pokaż wszystkie
                             with st.expander(f"Wskazówki z {tip_item['timestamp'].strftime('%d.%m.%Y %H:%M')} - {tip_item['language']}"):
                                 tips_list = tip_item['tips_text'].split('\n')
                                 for tip in tips_list:
@@ -543,7 +543,7 @@ def main():
                     exercise_history = [item for item in st.session_state.correction_history if item.get('mode') == 'exercise']
                     
                     if exercise_history:
-                        for i, exercise_item in enumerate(exercise_history[:5]):  # Pokaż ostatnie 5
+                        for i, exercise_item in enumerate(exercise_history):  # Pokaż wszystkie
                             exercise = exercise_item['exercise']
                             with st.expander(f"Ćwiczenie z {exercise_item['timestamp'].strftime('%d.%m.%Y %H:%M')} - {exercise.get('title', 'Ćwiczenie')}"):
                                 st.markdown(f"**🎯 {exercise.get('title', 'Ćwiczenie')}**")
@@ -579,7 +579,7 @@ def main():
             st.subheader("📚 Archiwum sesji czatu")
             
             if st.session_state.chat_sessions_history:
-                for i, chat_session in enumerate(st.session_state.chat_sessions_history[:5]):  # Pokaż ostatnie 5
+                for i, chat_session in enumerate(st.session_state.chat_sessions_history):  # Pokaż wszystkie
                     with st.expander(f"Sesja z {chat_session['timestamp'].strftime('%d.%m.%Y %H:%M')} - {chat_session['language']} ({chat_session['message_count']} wiadomości)"):
                         if chat_session.get('context'):
                             st.info(f"**Kontekst:** {chat_session['context']}")
@@ -1168,9 +1168,9 @@ def main():
         
         
         if st.session_state.correction_history:
-            # Filtruj tylko poprawki i weź ostatnie 5
+            # Filtruj tylko poprawki i wyświetl wszystkie
             correction_items = [item for item in st.session_state.correction_history if item.get('mode') == 'correction']
-            for i, item in enumerate(reversed(correction_items[-5:])):
+            for i, item in enumerate(reversed(correction_items)):
                     with st.expander(f"Poprawka {len(st.session_state.correction_history) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
                         # Przycisk usuwania
                         col_delete, col_content = st.columns([1, 10])
@@ -1207,9 +1207,9 @@ def main():
         
         
         if st.session_state.correction_history:
-            # Filtruj tylko analizy i weź ostatnie 5
+            # Filtruj tylko analizy i wyświetl wszystkie
             analysis_items = [item for item in st.session_state.correction_history if item.get('mode') == 'analysis']
-            for i, item in enumerate(reversed(analysis_items[-5:])):
+            for i, item in enumerate(reversed(analysis_items)):
                     with st.expander(f"Analiza {len(st.session_state.correction_history) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
                         # Przycisk usuwania
                         col_delete, col_content = st.columns([1, 10])
