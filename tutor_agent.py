@@ -329,9 +329,11 @@ Odpowiadaj po polsku z przykładami w {target_language}."""
         ]
         
         # Sprawdź czy pytanie zawiera słowa kluczowe związane z nauką języka
-        for keyword in language_keywords:
-            if keyword in question_lower:
-                return True
+        has_language = any(lang in question_lower for lang in language_keywords)
+        
+        # Jeśli zawiera słowa językowe, to jest pytanie o język
+        if has_language:
+            return True
         
         # Sprawdź czy pytanie jest zbyt ogólne (nie związane z językiem)
         general_questions = [
@@ -339,13 +341,14 @@ Odpowiadaj po polsku z przykładami w {target_language}."""
             'where is', 'gdzie jest', 'why is', 'dlaczego jest', 'how is', 'jak jest',
             'tell me about', 'powiedz mi o', 'explain', 'wyjaśnij', 'help me with',
             'pomóż mi z', 'can you do', 'czy możesz zrobić', 'write', 'napisz',
-            'create', 'stwórz', 'make', 'zrób', 'generate', 'wygeneruj'
+            'create', 'stwórz', 'make', 'zrób', 'generate', 'wygeneruj',
+            'czym jest', 'co to', 'jak działa', 'how does', 'what does it do'
         ]
         
-        # Jeśli pytanie zawiera ogólne słowa ale nie ma słów związanych z językiem
+        # Sprawdź czy pytanie zawiera ogólne słowa
         has_general = any(general in question_lower for general in general_questions)
-        has_language = any(lang in question_lower for lang in language_keywords)
         
+        # Jeśli pytanie zawiera ogólne słowa ale nie ma słów związanych z językiem
         if has_general and not has_language:
             return False
         
@@ -353,8 +356,8 @@ Odpowiadaj po polsku z przykładami w {target_language}."""
         if len(question.split()) < 3 and not has_language:
             return False
         
-        # Domyślnie uznaj za pytanie o język jeśli nie można jednoznacznie stwierdzić
-        return True
+        # Domyślnie NIE uznaj za pytanie o język - tylko jeśli zawiera słowa językowe
+        return False
     
     def _is_conversation_request(self, question: str) -> bool:
         """Sprawdza czy użytkownik prosi o rozmowę w docelowym języku"""
