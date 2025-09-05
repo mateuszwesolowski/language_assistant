@@ -119,6 +119,9 @@ def reload_data_from_db():
         print(f"✅ Ponownie załadowano {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
     except Exception as e:
         print(f"❌ Błąd podczas ponownego ładowania danych z bazy: {str(e)}")
+    
+    # Odśwież UI po załadowaniu danych
+    st.rerun()
 
 def translate_text(text, target_language="angielski"):
     """

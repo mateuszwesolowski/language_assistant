@@ -264,10 +264,10 @@ class LanguageHelperDB:
             return []
         
         try:
-            # Pobieranie punktów z bazy danych
+            # Pobieranie punktów z bazy danych - używamy MAX_HISTORY_LIMIT jak w get_corrections
             points = self.client.scroll(
                 collection_name=self.collection_name,
-                limit=limit,
+                limit=MAX_HISTORY_LIMIT,  # Zmienione z limit na MAX_HISTORY_LIMIT
                 with_payload=True,
                 with_vectors=False
             )[0]
