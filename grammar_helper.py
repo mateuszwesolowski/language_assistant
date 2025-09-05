@@ -11,9 +11,15 @@ load_dotenv()
 # Konfiguracja OpenAI i instructor - tylko jeśli klucz API jest dostępny
 client = None
 instructor_client = None
-if os.getenv("OPENAI_API_KEY"):
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    instructor_client = instructor.patch(openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY")))
+api_key = os.getenv("OPENAI_API_KEY")
+if api_key and api_key.strip():  # Sprawdź czy nie jest None i nie jest pustym stringiem
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        instructor_client = instructor.patch(openai.OpenAI(api_key=api_key))
+    except Exception as e:
+        print(f"Błąd podczas inicjalizacji klienta OpenAI: {e}")
+        client = None
+        instructor_client = None
 
 class VocabularyItem(BaseModel):
     """Model dla elementu słownictwa"""

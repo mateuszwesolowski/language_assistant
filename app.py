@@ -17,8 +17,13 @@ load_dotenv()
 # Konfiguracja OpenAI - tylko jeśli klucz API jest dostępny
 client = None
 api_key = os.getenv("OPENAI_API_KEY")
-if api_key:
-    client = openai.OpenAI(api_key=api_key)
+if api_key and api_key.strip():  # Sprawdź czy nie jest None i nie jest pustym stringiem
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        print("✅ Klient OpenAI zainicjalizowany poprawnie")
+    except Exception as e:
+        print(f"❌ Błąd podczas inicjalizacji klienta OpenAI: {e}")
+        client = None
 else:
     print("❌ Błąd: Brak klucza API OpenAI w zmiennych środowiskowych")
 
@@ -471,7 +476,35 @@ def main():
                     
                     with col_new_exercise:
                         if st.button("🔄 Nowe ćwiczenie", use_container_width=True, key="new_exercise"):
-                            st.rerun()
+                            with st.spinner(f"Generuję nowe ćwiczenie z {exercise_type}..."):
+                                new_exercise = tutor_agent.generate_exercise(target_language, exercise_type)
+                                if "error" not in new_exercise:
+                                    # Zapisz do bazy danych
+                                    db_id = db.save_correction(
+                                        input_text="",
+                                        output_text="",
+                                        explanation="",
+                                        language=target_language,
+                                        mode='exercise',
+                                        analysis_data=new_exercise
+                                    )
+                                    
+                                    # Zapisz nowe ćwiczenie do sesji
+                                    new_exercise_item = {
+                                        'id': db_id,
+                                        'timestamp': datetime.now(),
+                                        'exercise': new_exercise,
+                                        'language': target_language,
+                                        'mode': 'exercise'
+                                    }
+                                    st.session_state.correction_history.append(new_exercise_item)
+                                    st.session_state.current_exercise = new_exercise_item
+                                    # Odśwież dane z bazy danych
+                                    reload_data_from_db()
+                                    st.success("✅ Nowe ćwiczenie wygenerowane i zapisane!")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ Błąd podczas generowania nowego ćwiczenia: {new_exercise['error']}")
                     
                     with col_chat:
                         if st.button("💬 Przejdź do chatu z tym ćwiczeniem", use_container_width=True, key="go_to_chat_with_exercise"):
