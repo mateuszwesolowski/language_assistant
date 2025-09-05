@@ -34,6 +34,8 @@ st.set_page_config(
     layout="wide"
 )
 
+# Wymuszenie redeploy - wersja 1.1
+
 # Tytuł aplikacji
 st.title("🌍 Pomocnik Językowy")
 st.markdown("---")
