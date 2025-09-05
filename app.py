@@ -589,82 +589,125 @@ def main():
                 context_info = st.session_state.chat_context
                 st.info(f"📋 **Kontekst:** {context_info}")
             
-            # Wyświetl historię czatu
-            if st.session_state.chat_messages:
-                st.markdown("---")
-                st.subheader("📚 Historia rozmowy")
-                
-                for message in st.session_state.chat_messages:
-                    if message['role'] == 'user':
-                        st.markdown(f"**👤 Ty:** {message['content']}")
-                    else:
-                        st.markdown(f"**🎓 Korepetytor:** {message['content']}")
-                    st.markdown("---")
+            # Kontener chatu z lepszym stylem
+            chat_container = st.container()
             
-            # Input do chatu
-            chat_input = st.text_area(
-                "Twoja wiadomość:",
-                placeholder=f"Zadaj pytanie o język {target_language}...",
-                height=100,
-                key="chat_input"
-            )
-            
-            col_send, col_archive_chat, col_clear = st.columns([2, 1, 1])
-            
-            with col_send:
-                if st.button("💬 Wyślij", use_container_width=True, key="send_chat_message"):
-                    if chat_input.strip():
-                        if tutor_agent:
-                            # Dodaj wiadomość użytkownika do historii
-                            st.session_state.chat_messages.append({
-                                'role': 'user',
-                                'content': chat_input,
-                                'timestamp': datetime.now()
-                            })
-                            
-                            with st.spinner("Korepetytor pisze..."):
-                                try:
-                                    # Przygotuj kontekst dla korepetytora
-                                    context = ""
-                                    if context_info:
-                                        context = f"KONTEKST: {context_info}\n\n"
-                                    
-                                    # Wywołaj korepetytora z kontekstem
-                                    answer = tutor_agent.answer_question_with_context(chat_input, target_language, context)
-                                    
-                                    if answer and "error" not in answer.lower():
-                                        # Dodaj odpowiedź korepetytora do historii
-                                        st.session_state.chat_messages.append({
-                                            'role': 'assistant',
-                                            'content': answer,
-                                            'timestamp': datetime.now()
-                                        })
-                                        st.success("✅ Odpowiedź wysłana!")
-                                        # Automatycznie zapisz sesję po każdej wiadomości
-                                        if len(st.session_state.chat_messages) >= 2:  # Co najmniej pytanie i odpowiedź
-                                            db.save_chat_session(st.session_state.chat_messages, target_language, context_info)
-                                            # Odśwież dane z bazy danych
-                                            reload_data_from_db()
-                                        st.rerun()  # Tylko teraz rerun żeby odświeżyć chat
-                                    else:
-                                        st.error(f"❌ Błąd: {answer}")
-                                except Exception as e:
-                                    st.error(f"❌ Błąd podczas przetwarzania: {str(e)}")
+            with chat_container:
+                # Wyświetl historię czatu w stylu ChatGPT
+                if st.session_state.chat_messages:
+                    for message in st.session_state.chat_messages:
+                        if message['role'] == 'user':
+                            # Wiadomość użytkownika - po prawej stronie
+                            st.markdown(f"""
+                            <div style="display: flex; justify-content: flex-end; margin: 10px 0;">
+                                <div style="background-color: #007bff; color: white; padding: 10px 15px; border-radius: 18px 18px 5px 18px; max-width: 70%; word-wrap: break-word;">
+                                    <strong>👤 Ty:</strong><br>{message['content']}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
                         else:
-                            st.error("❌ Agent korepetytor nie jest dostępny")
+                            # Wiadomość korepetytora - po lewej stronie
+                            st.markdown(f"""
+                            <div style="display: flex; justify-content: flex-start; margin: 10px 0;">
+                                <div style="background-color: #f1f3f4; color: #333; padding: 10px 15px; border-radius: 18px 18px 18px 5px; max-width: 70%; word-wrap: break-word;">
+                                    <strong>🎓 Korepetytor:</strong><br>{message['content']}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                else:
+                    # Pierwsza wiadomość powitalna
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: flex-start; margin: 20px 0;">
+                        <div style="background-color: #e3f2fd; color: #1976d2; padding: 15px 20px; border-radius: 18px 18px 18px 5px; max-width: 80%; word-wrap: break-word; border-left: 4px solid #2196f3;">
+                            <strong>🎓 Korepetytor:</strong><br>
+                            Cześć! Jestem Twoim osobistym korepetytorem języka {target_language}. 
+                            Mogę pomóc Ci z gramatyką, słownictwem, tłumaczeniami i ćwiczeniami. 
+                            Zadaj mi pytanie lub poproś o pomoc!
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Input do chatu - na dole, zawsze widoczny
+            st.markdown("---")
+            
+            # Formularz chatu
+            with st.form(key="chat_form", clear_on_submit=True):
+                col_input, col_send = st.columns([4, 1])
+                
+                with col_input:
+                    chat_input = st.text_input(
+                        "Twoja wiadomość:",
+                        placeholder=f"Zadaj pytanie o język {target_language}...",
+                        key="chat_input_form"
+                    )
+                
+                with col_send:
+                    send_button = st.form_submit_button("💬 Wyślij", use_container_width=True)
+                
+                # Obsługa wysyłania wiadomości
+                if send_button and chat_input.strip():
+                    if tutor_agent:
+                        # Dodaj wiadomość użytkownika do historii
+                        st.session_state.chat_messages.append({
+                            'role': 'user',
+                            'content': chat_input,
+                            'timestamp': datetime.now()
+                        })
+                        
+                        with st.spinner("Korepetytor pisze..."):
+                            try:
+                                # Przygotuj kontekst dla korepetytora
+                                context = ""
+                                if context_info:
+                                    context = f"KONTEKST: {context_info}\n\n"
+                                
+                                # Wywołaj korepetytora z kontekstem
+                                answer = tutor_agent.answer_question_with_context(chat_input, target_language, context)
+                                
+                                if answer and "error" not in answer.lower():
+                                    # Dodaj odpowiedź korepetytora do historii
+                                    st.session_state.chat_messages.append({
+                                        'role': 'assistant',
+                                        'content': answer,
+                                        'timestamp': datetime.now()
+                                    })
+                                    
+                                    # Automatycznie zapisz sesję po każdej wiadomości
+                                    if len(st.session_state.chat_messages) >= 2:  # Co najmniej pytanie i odpowiedź
+                                        db.save_chat_session(st.session_state.chat_messages, target_language, context_info)
+                                        # Odśwież dane z bazy danych
+                                        reload_data_from_db()
+                                    
+                                    st.rerun()  # Odśwież chat
+                                else:
+                                    st.error(f"❌ Błąd: {answer}")
+                            except Exception as e:
+                                st.error(f"❌ Błąd podczas przetwarzania: {str(e)}")
                     else:
-                        st.warning("⚠️ Wprowadź wiadomość")
+                        st.error("❌ Agent korepetytor nie jest dostępny")
+                elif send_button and not chat_input.strip():
+                    st.warning("⚠️ Wprowadź wiadomość")
+            
+            # Przyciski akcji pod chatem
+            col_archive_chat, col_clear, col_new_chat = st.columns([1, 1, 1])
             
             with col_archive_chat:
-                if st.button("📚 Archiwum sesji", use_container_width=True, key="show_chat_archive"):
+                if st.button("📚 Archiwum", use_container_width=True, key="show_chat_archive"):
                     st.session_state.open_chat_archive = True
                     st.rerun()
             
             with col_clear:
-                if st.button("🗑️ Wyczyść chat", use_container_width=True, key="clear_chat"):
+                if st.button("🗑️ Wyczyść", use_container_width=True, key="clear_chat"):
                     st.session_state.chat_messages = []
                     st.session_state.chat_context = ""
                     st.success("✅ Chat wyczyszczony!")
+                    st.rerun()
+            
+            with col_new_chat:
+                if st.button("🆕 Nowy chat", use_container_width=True, key="new_chat"):
+                    st.session_state.chat_messages = []
+                    st.session_state.chat_context = ""
+                    st.success("✅ Rozpoczęto nowy chat!")
                     st.rerun()
             
             # Wyświetl archiwum sesji czatu - tylko w sekcji chatu
