@@ -6,6 +6,7 @@ import os
 import openai
 from dotenv import load_dotenv
 from typing import Optional
+from logger_config import log_openai_init
 
 # Ładowanie zmiennych środowiskowych
 load_dotenv()
@@ -20,15 +21,15 @@ def get_openai_client() -> Optional[openai.OpenAI]:
     api_key = os.getenv("OPENAI_API_KEY")
     
     if not api_key or not api_key.strip():
-        print("❌ Błąd: Brak klucza API OpenAI w zmiennych środowiskowych")
+        log_openai_init(False, "Brak klucza API OpenAI w zmiennych środowiskowych")
         return None
     
     try:
         client = openai.OpenAI(api_key=api_key)
-        print("✅ Klient OpenAI zainicjalizowany poprawnie")
+        log_openai_init(True)
         return client
     except Exception as e:
-        print(f"❌ Błąd podczas inicjalizacji klienta OpenAI: {e}")
+        log_openai_init(False, str(e))
         return None
 
 def get_instructor_client() -> Optional[openai.OpenAI]:
@@ -41,16 +42,16 @@ def get_instructor_client() -> Optional[openai.OpenAI]:
     api_key = os.getenv("OPENAI_API_KEY")
     
     if not api_key or not api_key.strip():
-        print("❌ Błąd: Brak klucza API OpenAI w zmiennych środowiskowych")
+        log_openai_init(False, "Brak klucza API OpenAI w zmiennych środowiskowych")
         return None
     
     try:
         import instructor
         client = instructor.patch(openai.OpenAI(api_key=api_key))
-        print("✅ Klient OpenAI z instructor zainicjalizowany poprawnie")
+        log_openai_init(True, "z instructor")
         return client
     except Exception as e:
-        print(f"❌ Błąd podczas inicjalizacji klienta OpenAI z instructor: {e}")
+        log_openai_init(False, f"z instructor: {str(e)}")
         return None
 
 # Globalne instancje klientów

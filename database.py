@@ -9,6 +9,14 @@ from constants import (
     QDRANT_VECTOR_SIZE, QDRANT_TIMEOUT, QDRANT_DEFAULT_COLLECTION,
     DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT
 )
+from logger_config import log_database_operation, log_debug, log_error
+from cache_manager import (
+    cache_translations, get_cached_translations,
+    cache_corrections, get_cached_corrections,
+    cache_chat_sessions, get_cached_chat_sessions,
+    cache_tips_history, get_cached_tips_history,
+    invalidate_cache
+)
 
 # Ładowanie zmiennych środowiskowych
 load_dotenv()
@@ -23,10 +31,7 @@ class LanguageHelperDB:
         self.collection_name = os.getenv("QDRANT_COLLECTION_NAME", QDRANT_DEFAULT_COLLECTION)
         
         # Debug - sprawdź zmienne środowiskowe
-        print(f"🔍 DEBUG Qdrant config:")
-        print(f"   URL: {self.qdrant_url}")
-        print(f"   API Key: {'***' if self.qdrant_api_key else 'BRAK'}")
-        print(f"   Collection: {self.collection_name}")
+        log_debug(f"Qdrant config - URL: {self.qdrant_url}, API Key: {'***' if self.qdrant_api_key else 'BRAK'}, Collection: {self.collection_name}")
         
         # Inicjalizacja klienta Qdrant
         try:
@@ -41,9 +46,9 @@ class LanguageHelperDB:
                     url=self.qdrant_url,
                     timeout=QDRANT_TIMEOUT
                 )
-            print(f"✅ Połączenie z Qdrant: {self.qdrant_url}")
+            log_database_operation("Połączenie z Qdrant", True, f"URL: {self.qdrant_url}")
         except Exception as e:
-            print(f"❌ Błąd podczas łączenia z Qdrant: {str(e)}")
+            log_database_operation("Połączenie z Qdrant", False, str(e))
             self.client = None
         
         # Utworzenie kolekcji jeśli nie istnieje
@@ -61,21 +66,18 @@ class LanguageHelperDB:
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(size=QDRANT_VECTOR_SIZE, distance=Distance.COSINE)
                 )
-                print(f"✅ Utworzono kolekcję: {self.collection_name}")
+                log_database_operation("Tworzenie kolekcji", True, f"Kolekcja: {self.collection_name}")
             else:
-                print(f"✅ Kolekcja {self.collection_name} już istnieje")
+                log_database_operation("Sprawdzanie kolekcji", True, f"Kolekcja {self.collection_name} już istnieje")
         except Exception as e:
-            print(f"❌ Błąd podczas tworzenia kolekcji: {str(e)}")
+            log_database_operation("Tworzenie kolekcji", False, str(e))
     
     def save_translation(self, input_text, output_text, target_language, mode="translation", audio_data=None, voice=None):
         """Zapisuje tłumaczenie do bazy danych"""
-        print(f"🔍 DEBUG save_translation:")
-        print(f"   Client exists: {self.client is not None}")
-        print(f"   Input text: {input_text[:50]}...")
-        print(f"   Target language: {target_language}")
+        log_debug(f"save_translation - Client exists: {self.client is not None}, Input text: {input_text[:50]}..., Target language: {target_language}")
         
         if not self.client:
-            print("❌ Błąd: Brak połączenia z bazą danych Qdrant")
+            log_database_operation("Zapisywanie tłumaczenia", False, "Brak połączenia z bazą danych Qdrant")
             return None
         
         try:
@@ -111,17 +113,20 @@ class LanguageHelperDB:
                 points=[point]
             )
             
-            print(f"✅ Zapisano tłumaczenie do bazy danych: {point_id}")
+            # Unieważnij cache po zapisaniu
+            invalidate_cache("translations")
+            
+            log_database_operation("Zapisywanie tłumaczenia", True, f"ID: {point_id}")
             return point_id
             
         except Exception as e:
-            print(f"❌ Błąd podczas zapisywania do bazy danych: {str(e)}")
+            log_database_operation("Zapisywanie tłumaczenia", False, str(e))
             return None
     
     def save_correction(self, input_text, output_text, explanation, language, mode="correction", analysis_data=None):
         """Zapisuje poprawkę lub analizę do bazy danych"""
         if not self.client:
-            print("❌ Błąd: Brak połączenia z bazą danych Qdrant")
+            log_database_operation(f"Zapisywanie {mode}", False, "Brak połączenia z bazą danych Qdrant")
             return None
         
         try:
@@ -164,13 +169,16 @@ class LanguageHelperDB:
                 points=[point]
             )
             
-            print(f"✅ Zapisano {mode} do bazy danych: {point_id}")
+            # Unieważnij cache po zapisaniu
+            invalidate_cache("corrections")
+            
+            log_database_operation(f"Zapisywanie {mode}", True, f"ID: {point_id}")
             if mode == "analysis":
-                print(f"✅ Analiza została zapisana w formacie JSON zamiast pickle")
+                log_debug("Analiza została zapisana w formacie JSON zamiast pickle")
             return point_id
             
         except Exception as e:
-            print(f"❌ Błąd podczas zapisywania {mode} do bazy danych: {str(e)}")
+            log_database_operation(f"Zapisywanie {mode}", False, str(e))
             return None
     
     def save_chat_session(self, messages: list, language: str, context: str = ""):
@@ -207,11 +215,14 @@ class LanguageHelperDB:
                 points=[point]
             )
             
-            print(f"✅ Zapisano sesję czatu do bazy danych: {point_id}")
+            # Unieważnij cache po zapisaniu
+            invalidate_cache("chat_sessions")
+            
+            log_database_operation("Zapisywanie sesji czatu", True, f"ID: {point_id}")
             return point_id
             
         except Exception as e:
-            print(f"❌ Błąd podczas zapisywania sesji czatu do bazy danych: {str(e)}")
+            log_database_operation("Zapisywanie sesji czatu", False, str(e))
             return None
     
     def save_learning_tips(self, tips: list, language: str):
@@ -246,21 +257,28 @@ class LanguageHelperDB:
                 points=[point]
             )
             
-            print(f"✅ Zapisano wskazówki do bazy danych: {point_id}")
+            # Unieważnij cache po zapisaniu
+            invalidate_cache("tips_history")
+            
+            log_database_operation("Zapisywanie wskazówek", True, f"ID: {point_id}")
             return point_id
             
         except Exception as e:
-            print(f"❌ Błąd podczas zapisywania wskazówek do bazy danych: {str(e)}")
+            log_database_operation("Zapisywanie wskazówek", False, str(e))
             return None
     
     def get_translations(self, limit=50):
-        """Pobiera tłumaczenia z bazy danych"""
-        print(f"🔍 DEBUG get_translations:")
-        print(f"   Client exists: {self.client is not None}")
-        print(f"   Limit: {limit}")
+        """Pobiera tłumaczenia z bazy danych z cache"""
+        # Sprawdź cache najpierw
+        cached_translations = get_cached_translations()
+        if cached_translations is not None:
+            log_debug(f"get_translations - zwracam z cache: {len(cached_translations)} tłumaczeń")
+            return cached_translations[:limit] if limit else cached_translations
+        
+        log_debug(f"get_translations - Client exists: {self.client is not None}, Limit: {limit}")
         
         if not self.client:
-            print("❌ Błąd: Brak połączenia z bazą danych Qdrant")
+            log_database_operation("Pobieranie tłumaczeń", False, "Brak połączenia z bazą danych Qdrant")
             return []
         
         try:
@@ -272,12 +290,12 @@ class LanguageHelperDB:
                 with_vectors=False
             )[0]
             
-            print(f"🔍 DEBUG get_translations - pobrano {len(points)} punktów")
+            log_debug(f"get_translations - pobrano {len(points)} punktów")
             
             translations = []
             for point in points:
                 payload = point.payload
-                print(f"🔍 DEBUG punkt: mode={payload.get('mode')}, timestamp={payload.get('timestamp')}")
+                log_debug(f"punkt: mode={payload.get('mode')}, timestamp={payload.get('timestamp')}")
                 if payload.get("mode") == "translation":
                     # Konwersja audio z base64 jeśli istnieje
                     audio_data = None
@@ -299,15 +317,25 @@ class LanguageHelperDB:
             
             # Sortowanie po timestamp (najnowsze pierwsze)
             translations.sort(key=lambda x: x["timestamp"], reverse=True)
-            print(f"🔍 DEBUG get_translations - zwracam {len(translations)} tłumaczeń")
-            return translations
+            
+            # Zapisz w cache
+            cache_translations(translations)
+            
+            log_debug(f"get_translations - zwracam {len(translations)} tłumaczeń")
+            return translations[:limit] if limit else translations
             
         except Exception as e:
-            print(f"❌ Błąd podczas pobierania tłumaczeń: {str(e)}")
+            log_database_operation("Pobieranie tłumaczeń", False, str(e))
             return []
     
     def get_corrections(self, limit=50):
-        """Pobiera poprawki i analizy z bazy danych"""
+        """Pobiera poprawki i analizy z bazy danych z cache"""
+        # Sprawdź cache najpierw
+        cached_corrections = get_cached_corrections()
+        if cached_corrections is not None:
+            log_debug(f"get_corrections - zwracam z cache: {len(cached_corrections)} poprawek")
+            return cached_corrections[:limit] if limit else cached_corrections
+        
         try:
             # Pobieranie punktów z bazy danych
             points = self.client.scroll(
@@ -363,7 +391,7 @@ class LanguageHelperDB:
                                 )
                                 item["analysis"] = analysis_obj
                             except Exception as e:
-                                print(f"❌ Błąd deserializacji analizy: {str(e)}")
+                                log_error(f"Błąd deserializacji analizy: {str(e)}")
                                 item["analysis"] = None
                     elif payload.get("mode") == "exercise":
                         # Dla ćwiczeń, deserializuj dane z JSON
@@ -373,21 +401,31 @@ class LanguageHelperDB:
                                 exercise_dict = json.loads(payload["exercise_data"])
                                 item["exercise"] = exercise_dict
                             except Exception as e:
-                                print(f"❌ Błąd deserializacji ćwiczenia: {str(e)}")
+                                log_error(f"Błąd deserializacji ćwiczenia: {str(e)}")
                                 item["exercise"] = None
                     
                     corrections.append(item)
             
             # Sortowanie po timestamp (najnowsze pierwsze)
             corrections.sort(key=lambda x: x["timestamp"], reverse=True)
-            return corrections
+            
+            # Zapisz w cache
+            cache_corrections(corrections)
+            
+            return corrections[:limit] if limit else corrections
             
         except Exception as e:
-            print(f"❌ Błąd podczas pobierania poprawek i analiz: {str(e)}")
+            log_database_operation("Pobieranie poprawek i analiz", False, str(e))
             return []
     
     def get_chat_sessions(self, limit=20):
-        """Pobiera sesje czatu z bazy danych"""
+        """Pobiera sesje czatu z bazy danych z cache"""
+        # Sprawdź cache najpierw
+        cached_sessions = get_cached_chat_sessions()
+        if cached_sessions is not None:
+            log_debug(f"get_chat_sessions - zwracam z cache: {len(cached_sessions)} sesji")
+            return cached_sessions[:limit] if limit else cached_sessions
+        
         try:
             points = self.client.scroll(
                 collection_name=self.collection_name,
@@ -413,14 +451,24 @@ class LanguageHelperDB:
             
             # Sortowanie po timestamp (najnowsze pierwsze)
             chat_sessions.sort(key=lambda x: x["timestamp"], reverse=True)
-            return chat_sessions
+            
+            # Zapisz w cache
+            cache_chat_sessions(chat_sessions)
+            
+            return chat_sessions[:limit] if limit else chat_sessions
             
         except Exception as e:
-            print(f"❌ Błąd podczas pobierania sesji czatu: {str(e)}")
+            log_database_operation("Pobieranie sesji czatu", False, str(e))
             return []
     
     def get_learning_tips_history(self, limit=20):
-        """Pobiera historię wskazówek do nauki z bazy danych"""
+        """Pobiera historię wskazówek do nauki z bazy danych z cache"""
+        # Sprawdź cache najpierw
+        cached_tips = get_cached_tips_history()
+        if cached_tips is not None:
+            log_debug(f"get_learning_tips_history - zwracam z cache: {len(cached_tips)} wskazówek")
+            return cached_tips[:limit] if limit else cached_tips
+        
         try:
             points = self.client.scroll(
                 collection_name=self.collection_name,
@@ -446,10 +494,14 @@ class LanguageHelperDB:
             
             # Sortowanie po timestamp (najnowsze pierwsze)
             tips_history.sort(key=lambda x: x["timestamp"], reverse=True)
-            return tips_history
+            
+            # Zapisz w cache
+            cache_tips_history(tips_history)
+            
+            return tips_history[:limit] if limit else tips_history
             
         except Exception as e:
-            print(f"❌ Błąd podczas pobierania historii wskazówek: {str(e)}")
+            log_database_operation("Pobieranie historii wskazówek", False, str(e))
             return []
     
     def delete_item(self, item_id):
@@ -459,10 +511,10 @@ class LanguageHelperDB:
                 collection_name=self.collection_name,
                 points_selector=[item_id]
             )
-            print(f"✅ Usunięto element z bazy danych: {item_id}")
+            log_database_operation("Usuwanie elementu", True, f"ID: {item_id}")
             return True
         except Exception as e:
-            print(f"❌ Błąd podczas usuwania elementu: {str(e)}")
+            log_database_operation("Usuwanie elementu", False, str(e))
             return False
     
     def clear_all(self):
@@ -472,10 +524,13 @@ class LanguageHelperDB:
                 collection_name=self.collection_name,
                 points_selector="all"
             )
-            print(f"✅ Wyczyszczono całą bazę danych")
+            # Wyczyść cache po wyczyszczeniu bazy
+            invalidate_cache()
+            
+            log_database_operation("Czyszczenie bazy danych", True)
             return True
         except Exception as e:
-            print(f"❌ Błąd podczas czyszczenia bazy danych: {str(e)}")
+            log_database_operation("Czyszczenie bazy danych", False, str(e))
             return False
     
     def get_stats(self):

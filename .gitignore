@@ -61,3 +61,4 @@ audio_files/
 
 # Logs
 *.log
+logs/

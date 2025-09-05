@@ -2,6 +2,7 @@ import openai
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from database import LanguageHelperDB
+from logger_config import log_debug, log_error
 
 class TutorAgent:
     def __init__(self, client: openai.OpenAI, db: LanguageHelperDB):
@@ -151,7 +152,7 @@ class TutorAgent:
             import json
             try:
                 content = response.choices[0].message.content.strip()
-                print(f"DEBUG: Raw AI response: {content}")
+                log_debug(f"Raw AI response: {content}")
                 
                 # Usuń ewentualne markdown formatting
                 if content.startswith('```json'):
@@ -164,7 +165,7 @@ class TutorAgent:
                     content = content[:-3]
                 content = content.strip()
                 
-                print(f"DEBUG: Cleaned content: {content}")
+                log_debug(f"Cleaned content: {content}")
                 
                 # Sprawdź czy content zaczyna się i kończy na nawiasach klamrowych
                 if not (content.startswith('{') and content.endswith('}')):
@@ -174,8 +175,8 @@ class TutorAgent:
                 exercise_data['timestamp'] = datetime.now().isoformat()  # Konwertuj na string
                 return exercise_data
             except json.JSONDecodeError as e:
-                print(f"DEBUG: JSON parsing error: {e}")
-                print(f"DEBUG: Raw response: {response.choices[0].message.content}")
+                log_error(f"JSON parsing error: {e}")
+                log_debug(f"Raw response: {response.choices[0].message.content}")
                 return {"error": f"Błąd parsowania odpowiedzi AI: {str(e)}"}
                 
         except Exception as e:

@@ -13,6 +13,7 @@ from constants import (
     DEFAULT_HISTORY_LIMIT, SUCCESS_MESSAGES, ERROR_MESSAGES
 )
 from validators import validate_text_input, validate_language, sanitize_text
+from logger_config import log_user_action, log_debug, log_error
 
 # Konfiguracja OpenAI
 client = get_global_openai_client()
@@ -36,7 +37,7 @@ tutor_agent = None
 if client:
     tutor_agent = TutorAgent(client, db)
 else:
-    print("❌ Błąd: Nie można utworzyć tutor agent - brak klienta OpenAI")
+    log_error("Nie można utworzyć tutor agent - brak klienta OpenAI")
 
 # Inicjalizacja sesji
 if 'translation_history' not in st.session_state:
@@ -79,9 +80,9 @@ def load_data_from_db(force_reload=False):
         
         st.session_state.db_loaded = True
         action = "Ponownie załadowano" if force_reload else "Załadowano"
-        print(f"✅ {action} {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
+        log_debug(f"{action} {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
     except Exception as e:
-        print(f"❌ Błąd podczas ładowania danych z bazy: {str(e)}")
+        log_error(f"Błąd podczas ładowania danych z bazy: {str(e)}")
 
 def reload_data_from_db():
     """Ponownie ładuje dane z bazy danych do sesji"""
@@ -101,9 +102,9 @@ def reload_data_from_db():
         tips_history = db.get_learning_tips_history(limit=DEFAULT_HISTORY_LIMIT)
         st.session_state.tips_history = tips_history
         
-        print(f"✅ Ponownie załadowano {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
+        log_debug(f"Ponownie załadowano {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
     except Exception as e:
-        print(f"❌ Błąd podczas ponownego ładowania danych z bazy: {str(e)}")
+        log_error(f"Błąd podczas ponownego ładowania danych z bazy: {str(e)}")
     
     # Odśwież UI po załadowaniu danych
     st.rerun()
@@ -147,6 +148,20 @@ def translate_text(text, target_language="angielski"):
         return None
 
 def main():
+    """
+    Główna funkcja aplikacji Language Helper.
+    
+    Zarządza interfejsem użytkownika, obsługuje różne tryby pracy (tłumaczenie, 
+    poprawianie, analiza językowa, powtarzacz) oraz koordynuje interakcje 
+    z bazą danych i API OpenAI.
+    
+    Funkcje:
+    - Wyświetla dynamiczny opis sekcji
+    - Obsługuje przełączanie między trybami
+    - Zarządza historią operacji
+    - Koordynuje komunikację z korepetytorem AI
+    - Obsługuje generowanie audio i plików
+    """
     # Ładuj dane z bazy danych przy pierwszym uruchomieniu
     load_data_from_db()
     

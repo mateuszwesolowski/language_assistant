@@ -2,6 +2,7 @@ import tempfile
 import base64
 from pathlib import Path
 from openai_client import get_global_openai_client
+from logger_config import log_api_call, log_error, log_debug
 
 # Konfiguracja OpenAI
 client = get_global_openai_client()
@@ -11,14 +12,13 @@ def generate_audio(text: str, voice: str = "alloy", language: str = "en") -> byt
     Generuje wersję audio tekstu używając OpenAI TTS
     """
     if not client:
-        print("Klucz API OpenAI nie jest skonfigurowany. Dodaj OPENAI_API_KEY do pliku .env")
+        log_error("Klucz API OpenAI nie jest skonfigurowany")
         return None
     
     # Sprawdź długość tekstu (limit OpenAI TTS to ~4096 znaków)
     if len(text) > 4000:
-        print(f"Tekst jest za długi ({len(text)} znaków). Maksymalna długość to 4000 znaków.")
+        log_debug(f"Tekst za długi ({len(text)} znaków), przycinam do 4000")
         text = text[:4000] + "..."
-        print(f"Przycięto do {len(text)} znaków.")
     
     try:
         response = client.audio.speech.create(
@@ -31,12 +31,12 @@ def generate_audio(text: str, voice: str = "alloy", language: str = "en") -> byt
         
         # Sprawdź czy odpowiedź zawiera dane
         if not response.content:
-            print("Błąd: Brak danych audio w odpowiedzi")
+            log_api_call("OpenAI TTS", False, "Brak danych audio w odpowiedzi")
             return None
         
         # Sprawdź rozmiar danych
         if len(response.content) < 1000:  # Minimalny rozmiar dla pliku MP3
-            print(f"Błąd: Za mały rozmiar danych audio: {len(response.content)} bajtów")
+            log_api_call("OpenAI TTS", False, f"Za mały rozmiar danych audio: {len(response.content)} bajtów")
             return None
         
         # Zapisz audio do pliku tymczasowego
@@ -46,7 +46,7 @@ def generate_audio(text: str, voice: str = "alloy", language: str = "en") -> byt
         
         # Sprawdź czy plik został utworzony poprawnie
         if not os.path.exists(temp_file_path) or os.path.getsize(temp_file_path) == 0:
-            print("Błąd: Nie udało się utworzyć pliku audio")
+            log_error("Nie udało się utworzyć pliku audio")
             return None
         
         # Wczytaj plik i zwróć jako bytes
@@ -56,18 +56,20 @@ def generate_audio(text: str, voice: str = "alloy", language: str = "en") -> byt
         # Usuń plik tymczasowy
         os.unlink(temp_file_path)
         
-        print(f"✅ Audio wygenerowane pomyślnie: {len(audio_data)} bajtów")
+        log_api_call("OpenAI TTS", True, f"Audio wygenerowane: {len(audio_data)} bajtów")
         return audio_data
         
     except Exception as e:
-        print(f"Błąd podczas generowania audio: {str(e)}")
+        error_msg = str(e)
+        log_api_call("OpenAI TTS", False, error_msg)
+        
         # Sprawdź konkretne typy błędów
-        if "quota" in str(e).lower() or "billing" in str(e).lower():
-            print("Błąd: Brak środków na koncie OpenAI")
-        elif "invalid" in str(e).lower() or "format" in str(e).lower():
-            print("Błąd: Nieprawidłowy format tekstu")
-        elif "rate" in str(e).lower():
-            print("Błąd: Przekroczono limit zapytań")
+        if "quota" in error_msg.lower() or "billing" in error_msg.lower():
+            log_error("Brak środków na koncie OpenAI")
+        elif "invalid" in error_msg.lower() or "format" in error_msg.lower():
+            log_error("Nieprawidłowy format tekstu")
+        elif "rate" in error_msg.lower():
+            log_error("Przekroczono limit zapytań")
         return None
 
 def get_available_voices():
@@ -118,5 +120,5 @@ def save_audio_file(audio_data: bytes, filename: str = "audio.mp3") -> str:
         
         return str(file_path)
     except Exception as e:
-        print(f"Błąd podczas zapisywania pliku audio: {str(e)}")
+        log_error(f"Błąd podczas zapisywania pliku audio: {str(e)}")
         return None
