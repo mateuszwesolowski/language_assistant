@@ -616,13 +616,15 @@ def main():
                             """, unsafe_allow_html=True)
                 else:
                     # Pierwsza wiadomość powitalna
+                    welcome_message = f"""Cześć! Jestem Twoim osobistym korepetytorem języka {target_language}. 
+                    Mogę pomóc Ci z gramatyką, słownictwem, wymową i ćwiczeniami. 
+                    Zadaj mi pytanie o język {target_language} lub powiedz "rozmawiajmy po {target_language}" żeby przećwiczyć rozmowę!"""
+                    
                     st.markdown(f"""
                     <div style="display: flex; justify-content: flex-start; margin: 20px 0;">
                         <div style="background-color: #e3f2fd; color: #1976d2; padding: 15px 20px; border-radius: 18px 18px 18px 5px; max-width: 80%; word-wrap: break-word; border-left: 4px solid #2196f3;">
                             <strong>🎓 Korepetytor:</strong><br>
-                            Cześć! Jestem Twoim osobistym korepetytorem języka {target_language}. 
-                            Mogę pomóc Ci z gramatyką, słownictwem, tłumaczeniami i ćwiczeniami. 
-                            Zadaj mi pytanie lub poproś o pomoc!
+                            {welcome_message}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)

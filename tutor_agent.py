@@ -223,14 +223,52 @@ class TutorAgent:
         try:
             history_summary = self.get_user_history_summary(target_language)
             
-            system_prompt = f"""Jesteś korepetytorem języka {target_language}. Odpowiadaj na pytania użytkownika w sposób przyjazny i pomocny.
+            # Sprawdź czy pytanie jest związane z nauką języka
+            if not self._is_language_learning_question(question):
+                return f"Przepraszam, ale mogę pomóc Ci tylko z pytaniami związanymi z nauką języka {target_language}. Zadaj mi pytanie o gramatykę, słownictwo, wymowę lub inne tematy językowe. Jestem tutaj, żeby być Twoim korepetytorem {target_language}!"
             
-            HISTORIA NAUKI UŻYTKOWNIKA:
-            {history_summary}
+            # Sprawdź czy użytkownik prosi o rozmowę w docelowym języku
+            is_conversation_request = self._is_conversation_request(question)
             
-            {context}
-            
-            Odpowiadaj po polsku, ale używaj przykładów w języku {target_language}. Bądź pomocny i motywujący."""
+            if is_conversation_request:
+                # Tryb rozmowy w docelowym języku
+                system_prompt = f"""You are a native {target_language} speaker and language tutor. The student wants to practice {target_language} conversation with you.
+
+IMPORTANT RULES:
+1. ALWAYS respond in {target_language} (not Polish) - you are a native speaker
+2. Speak naturally and conversationally, like a real tutor
+3. Be encouraging, patient, and helpful
+4. Use simple, clear {target_language} that matches the student's level
+5. Ask follow-up questions to keep the conversation going
+6. Correct mistakes gently and provide examples
+7. Make the conversation engaging and educational
+
+STUDENT'S LEARNING HISTORY:
+{history_summary}
+
+CONTEXT FROM OTHER SECTIONS:
+{context}
+
+Remember: You are now having a conversation in {target_language}. Respond naturally in {target_language}, not in Polish."""
+            else:
+                # Tryb wyjaśnień po polsku
+                system_prompt = f"""Jesteś korepetytorem języka {target_language}. Odpowiadaj na pytania użytkownika w sposób przyjazny i pomocny.
+
+WAŻNE ZASADY:
+1. Odpowiadaj po polsku, ale używaj przykładów w języku {target_language}
+2. Bądź pomocny i motywujący
+3. Używaj prostego, zrozumiałego języka
+4. Podawaj konkretne przykłady
+5. Uwzględniaj poziom użytkownika
+6. Jeśli użytkownik chce ćwiczyć rozmowę, zaproponuj przejście w tryb rozmowy w {target_language}
+
+HISTORIA NAUKI UŻYTKOWNIKA:
+{history_summary}
+
+KONTEKST Z INNYCH SEKCJI:
+{context}
+
+Odpowiadaj po polsku z przykładami w {target_language}."""
             
             response = self.client.chat.completions.create(
                 model="gpt-4o",
@@ -245,7 +283,103 @@ class TutorAgent:
             return response.choices[0].message.content.strip()
             
         except Exception as e:
-            return f"Błąd podczas odpowiadania na pytanie: {str(e)}"
+            return f"Przepraszam, wystąpił błąd. Spróbuj ponownie z pytaniem o język {target_language}."
+    
+    def _is_language_learning_question(self, question: str) -> bool:
+        """Sprawdza czy pytanie jest związane z nauką języka"""
+        question_lower = question.lower()
+        
+        # Słowa kluczowe związane z nauką języka
+        language_keywords = [
+            # Gramatyka
+            'grammar', 'gramatyka', 'tense', 'czas', 'verb', 'czasownik', 'noun', 'rzeczownik',
+            'adjective', 'przymiotnik', 'adverb', 'przysłówek', 'preposition', 'przyimek',
+            'conjunction', 'spójnik', 'pronoun', 'zaimek', 'article', 'artykuł',
+            'past tense', 'present tense', 'future tense', 'perfect', 'continuous',
+            'conditional', 'subjunctive', 'passive', 'active', 'infinitive', 'gerund',
+            
+            # Słownictwo
+            'vocabulary', 'słownictwo', 'word', 'słowo', 'meaning', 'znaczenie',
+            'translation', 'tłumaczenie', 'synonym', 'antonim', 'definition', 'definicja',
+            'phrase', 'fraza', 'expression', 'wyrażenie', 'idiom', 'idiom',
+            
+            # Wymowa
+            'pronunciation', 'wymowa', 'accent', 'akcent', 'stress', 'akcent',
+            'phonetics', 'fonetyka', 'sound', 'dźwięk', 'speak', 'mówić',
+            
+            # Umiejętności językowe
+            'speaking', 'mówienie', 'listening', 'słuchanie', 'reading', 'czytanie',
+            'writing', 'pisanie', 'conversation', 'rozmowa', 'dialogue', 'dialog',
+            'practice', 'ćwiczenie', 'exercise', 'zadanie', 'test', 'test',
+            
+            # Języki
+            'english', 'angielski', 'german', 'niemiecki', 'french', 'francuski',
+            'spanish', 'hiszpański', 'italian', 'włoski', 'russian', 'rosyjski',
+            'japanese', 'japoński', 'korean', 'koreański', 'chinese', 'chiński',
+            
+            # Pytania o język
+            'how to say', 'jak powiedzieć', 'what does', 'co oznacza', 'how do you',
+            'jak się', 'can you help', 'czy możesz pomóc', 'explain', 'wyjaśnij',
+            'difference', 'różnica', 'correct', 'poprawny', 'wrong', 'błędny',
+            'mistake', 'błąd', 'error', 'błąd', 'improve', 'poprawić',
+            
+            # Poziomy
+            'beginner', 'początkujący', 'intermediate', 'średniozaawansowany',
+            'advanced', 'zaawansowany', 'level', 'poziom', 'difficulty', 'trudność'
+        ]
+        
+        # Sprawdź czy pytanie zawiera słowa kluczowe związane z nauką języka
+        for keyword in language_keywords:
+            if keyword in question_lower:
+                return True
+        
+        # Sprawdź czy pytanie jest zbyt ogólne (nie związane z językiem)
+        general_questions = [
+            'what is', 'co to jest', 'who is', 'kto to jest', 'when is', 'kiedy jest',
+            'where is', 'gdzie jest', 'why is', 'dlaczego jest', 'how is', 'jak jest',
+            'tell me about', 'powiedz mi o', 'explain', 'wyjaśnij', 'help me with',
+            'pomóż mi z', 'can you do', 'czy możesz zrobić', 'write', 'napisz',
+            'create', 'stwórz', 'make', 'zrób', 'generate', 'wygeneruj'
+        ]
+        
+        # Jeśli pytanie zawiera ogólne słowa ale nie ma słów związanych z językiem
+        has_general = any(general in question_lower for general in general_questions)
+        has_language = any(lang in question_lower for lang in language_keywords)
+        
+        if has_general and not has_language:
+            return False
+        
+        # Jeśli pytanie jest bardzo krótkie i nie zawiera słów kluczowych
+        if len(question.split()) < 3 and not has_language:
+            return False
+        
+        # Domyślnie uznaj za pytanie o język jeśli nie można jednoznacznie stwierdzić
+        return True
+    
+    def _is_conversation_request(self, question: str) -> bool:
+        """Sprawdza czy użytkownik prosi o rozmowę w docelowym języku"""
+        question_lower = question.lower()
+        
+        # Słowa kluczowe oznaczające prośbę o rozmowę
+        conversation_keywords = [
+            'rozmawiajmy', 'rozmowa', 'conversation', 'pogadajmy', 'pogadaj',
+            'ćwiczmy', 'ćwiczenie', 'practice', 'przećwiczmy', 'przećwicz',
+            'porozmawiajmy', 'porozmawiaj', 'let\'s talk', 'let\'s practice',
+            'let\'s speak', 'mówmy', 'speak', 'mów', 'talk', 'pogadajmy',
+            'przećwiczmy rozmowę', 'practice conversation', 'ćwiczenie rozmowy',
+            'rozmowa w', 'conversation in', 'mówmy po', 'speak in',
+            'przećwiczmy po', 'practice in', 'ćwiczenie po', 'exercise in',
+            'od teraz mów', 'from now speak', 'od teraz rozmawiaj', 'from now talk',
+            'przełącz się na', 'switch to', 'przełącz na', 'switch on',
+            'mów do mnie po', 'speak to me in', 'rozmawiaj ze mną po', 'talk to me in'
+        ]
+        
+        # Sprawdź czy pytanie zawiera słowa kluczowe oznaczające prośbę o rozmowę
+        for keyword in conversation_keywords:
+            if keyword in question_lower:
+                return True
+        
+        return False
     
     def answer_question(self, question: str, target_language: str) -> str:
         """Odpowiada na pytania użytkownika dotyczące języka"""
