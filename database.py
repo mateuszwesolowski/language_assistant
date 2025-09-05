@@ -5,6 +5,10 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 from datetime import datetime
 import json
 import uuid
+from constants import (
+    QDRANT_VECTOR_SIZE, QDRANT_TIMEOUT, QDRANT_DEFAULT_COLLECTION,
+    DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT
+)
 
 # Ładowanie zmiennych środowiskowych
 load_dotenv()
@@ -16,7 +20,7 @@ class LanguageHelperDB:
         """Inicjalizacja połączenia z bazą danych"""
         self.qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
         self.qdrant_api_key = os.getenv("QDRANT_API_KEY")
-        self.collection_name = os.getenv("QDRANT_COLLECTION_NAME", "language_helper_history")
+        self.collection_name = os.getenv("QDRANT_COLLECTION_NAME", QDRANT_DEFAULT_COLLECTION)
         
         # Inicjalizacja klienta Qdrant
         try:
@@ -24,12 +28,12 @@ class LanguageHelperDB:
                 self.client = QdrantClient(
                     url=self.qdrant_url, 
                     api_key=self.qdrant_api_key,
-                    timeout=60.0  # Dodaj timeout
+                    timeout=QDRANT_TIMEOUT
                 )
             else:
                 self.client = QdrantClient(
                     url=self.qdrant_url,
-                    timeout=60.0  # Dodaj timeout
+                    timeout=QDRANT_TIMEOUT
                 )
             print(f"✅ Połączenie z Qdrant: {self.qdrant_url}")
         except Exception as e:
@@ -46,10 +50,10 @@ class LanguageHelperDB:
             collection_names = [col.name for col in collections.collections]
             
             if self.collection_name not in collection_names:
-                # Utworzenie kolekcji z wektorami 384-wymiarowymi (dla embeddings)
+                # Utworzenie kolekcji z wektorami (dla embeddings)
                 self.client.create_collection(
                     collection_name=self.collection_name,
-                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+                    vectors_config=VectorParams(size=QDRANT_VECTOR_SIZE, distance=Distance.COSINE)
                 )
                 print(f"✅ Utworzono kolekcję: {self.collection_name}")
             else:
@@ -82,7 +86,7 @@ class LanguageHelperDB:
             # Tworzenie punktu w bazie danych
             point = PointStruct(
                 id=point_id,
-                vector=[0.0] * 384,  # Placeholder vector
+                vector=[0.0] * QDRANT_VECTOR_SIZE,  # Placeholder vector
                 payload=metadata
             )
             
@@ -131,7 +135,7 @@ class LanguageHelperDB:
             # Tworzenie punktu w bazie danych
             point = PointStruct(
                 id=point_id,
-                vector=[0.0] * 384,  # Placeholder vector
+                vector=[0.0] * QDRANT_VECTOR_SIZE,  # Placeholder vector
                 payload=metadata
             )
             
@@ -170,7 +174,7 @@ class LanguageHelperDB:
             # Tworzenie punktu w bazie danych
             point = PointStruct(
                 id=point_id,
-                vector=[0.0] * 384,  # Placeholder vector
+                vector=[0.0] * QDRANT_VECTOR_SIZE,  # Placeholder vector
                 payload={
                     **metadata,
                     "chat_text": chat_text,
@@ -209,7 +213,7 @@ class LanguageHelperDB:
             # Tworzenie punktu w bazie danych
             point = PointStruct(
                 id=point_id,
-                vector=[0.0] * 384,  # Placeholder vector
+                vector=[0.0] * QDRANT_VECTOR_SIZE,  # Placeholder vector
                 payload={
                     **metadata,
                     "tips_text": tips_text,
@@ -274,10 +278,10 @@ class LanguageHelperDB:
     def get_corrections(self, limit=50):
         """Pobiera poprawki i analizy z bazy danych"""
         try:
-            # Pobieranie punktów z bazy danych - zwiększamy limit żeby złapać nowe ćwiczenia
+            # Pobieranie punktów z bazy danych
             points = self.client.scroll(
                 collection_name=self.collection_name,
-                limit=100,  # Zwiększamy z 20 na 100
+                limit=MAX_HISTORY_LIMIT,
                 with_payload=True,
                 with_vectors=False
             )[0]

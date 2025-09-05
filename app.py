@@ -3,13 +3,18 @@ import os
 from dotenv import load_dotenv
 import openai
 from datetime import datetime
-import base64
 from text_corrector import correct_text, get_correction_explanation
 from grammar_helper import analyze_text, get_word_explanation
 from audio_generator import generate_audio, get_available_voices, get_voice_for_language, save_audio_file
 from database import LanguageHelperDB
 from file_handler import create_file_upload_widget
 from tutor_agent import TutorAgent
+from constants import (
+    OPENAI_MODEL, OPENAI_MAX_TOKENS, OPENAI_TEMPERATURE,
+    DEFAULT_HISTORY_LIMIT, MAX_DISPLAY_ITEMS, DEFAULT_REFRESH_INTERVAL,
+    SUCCESS_MESSAGES, ERROR_MESSAGES
+)
+from validators import validate_text_input, validate_language, sanitize_text
 
 # Ładowanie zmiennych środowiskowych
 load_dotenv()
@@ -33,8 +38,6 @@ st.set_page_config(
     page_icon="🌍",
     layout="wide"
 )
-
-# Wymuszenie redeploy - wersja 1.1
 
 # Tytuł aplikacji
 st.title("🌍 Pomocnik Językowy")
@@ -64,65 +67,61 @@ if 'chat_sessions_history' not in st.session_state:
 if 'tips_history' not in st.session_state:
     st.session_state.tips_history = []
 
-def load_data_from_db():
+def load_data_from_db(force_reload=False):
     """Ładuje dane z bazy danych do sesji"""
-    if not st.session_state.db_loaded:
-        try:
-            # Pobierz tłumaczenia z bazy danych
-            translations = db.get_translations(limit=20)
-            st.session_state.translation_history = translations
-            
-            # Pobierz poprawki i analizy z bazy danych
-            corrections = db.get_corrections(limit=20)
-            st.session_state.correction_history = corrections
-            
-            # Pobierz sesje czatu z bazy danych
-            chat_sessions = db.get_chat_sessions(limit=20)
-            st.session_state.chat_sessions_history = chat_sessions
-            
-            # Pobierz historię wskazówek z bazy danych
-            tips_history = db.get_learning_tips_history(limit=20)
-            st.session_state.tips_history = tips_history
-            
-            st.session_state.db_loaded = True
-            print(f"✅ Załadowano {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
-        except Exception as e:
-            print(f"❌ Błąd podczas ładowania danych z bazy: {str(e)}")
-
-def reload_data_from_db():
-    """Ponownie ładuje dane z bazy danych do sesji"""
+    from constants import DEFAULT_HISTORY_LIMIT
+    
+    # Sprawdź czy dane są już załadowane (tylko przy pierwszym ładowaniu)
+    if not force_reload and st.session_state.db_loaded:
+        return
+    
     try:
         # Pobierz tłumaczenia z bazy danych
-        translations = db.get_translations(limit=20)
+        translations = db.get_translations(limit=DEFAULT_HISTORY_LIMIT)
         st.session_state.translation_history = translations
         
         # Pobierz poprawki i analizy z bazy danych
-        corrections = db.get_corrections(limit=20)
+        corrections = db.get_corrections(limit=DEFAULT_HISTORY_LIMIT)
         st.session_state.correction_history = corrections
         
         # Pobierz sesje czatu z bazy danych
-        chat_sessions = db.get_chat_sessions(limit=20)
+        chat_sessions = db.get_chat_sessions(limit=DEFAULT_HISTORY_LIMIT)
         st.session_state.chat_sessions_history = chat_sessions
         
         # Pobierz historię wskazówek z bazy danych
-        tips_history = db.get_learning_tips_history(limit=20)
+        tips_history = db.get_learning_tips_history(limit=DEFAULT_HISTORY_LIMIT)
         st.session_state.tips_history = tips_history
         
-        print(f"✅ Ponownie załadowano {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
+        st.session_state.db_loaded = True
+        action = "Ponownie załadowano" if force_reload else "Załadowano"
+        print(f"✅ {action} {len(translations)} tłumaczeń, {len(corrections)} poprawek/analiz, {len(chat_sessions)} sesji czatu i {len(tips_history)} wskazówek z bazy danych")
     except Exception as e:
-        print(f"❌ Błąd podczas ponownego ładowania danych z bazy: {str(e)}")
+        print(f"❌ Błąd podczas ładowania danych z bazy: {str(e)}")
+
+def reload_data_from_db():
+    """Ponownie ładuje dane z bazy danych do sesji"""
+    load_data_from_db(force_reload=True)
 
 def translate_text(text, target_language="angielski"):
     """
     Funkcja do tłumaczenia tekstu z polskiego na wybrany język
     """
     if not client:
-        st.error("Klucz API OpenAI nie jest skonfigurowany. Dodaj OPENAI_API_KEY do pliku .env")
+        st.error(ERROR_MESSAGES["no_api_key"])
         return None
+    
+    # Walidacja inputu
+    is_valid, error_msg = validate_text_input(text)
+    if not is_valid:
+        st.error(error_msg)
+        return None
+    
+    # Sanityzacja tekstu
+    text = sanitize_text(text)
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_MODEL,
             messages=[
                 {
                     "role": "system",
@@ -133,8 +132,8 @@ def translate_text(text, target_language="angielski"):
                     "content": f"Przetłumacz na {target_language}: {text}"
                 }
             ],
-            max_tokens=1000,
-            temperature=0.3
+            max_tokens=OPENAI_MAX_TOKENS,
+            temperature=OPENAI_TEMPERATURE
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -809,7 +808,7 @@ def main():
                                 st.session_state.translation_history.append(translation_item)
                                 # Ustaw aktualny wynik sesji
                                 st.session_state.current_session_action = translation_item
-                                st.success("✅ Tłumaczenie zakończone i zapisane w bazie danych!")
+                                st.success(SUCCESS_MESSAGES["translation_saved"])
                         elif "Poprawianie" in mode:
                             corrected = correct_text(input_text, target_language)
                             if corrected:
@@ -836,7 +835,7 @@ def main():
                                 st.session_state.correction_history.append(correction_item)
                                 # Ustaw aktualny wynik sesji
                                 st.session_state.current_session_action = correction_item
-                                st.success("✅ Poprawianie zakończone i zapisane w bazie danych!")
+                                st.success(SUCCESS_MESSAGES["correction_saved"])
                         elif "Analiza" in mode:
                             try:
                                 analysis = analyze_text(input_text, target_language)
@@ -863,7 +862,7 @@ def main():
                                     st.session_state.correction_history.append(analysis_item)
                                     # Ustaw aktualny wynik sesji
                                     st.session_state.current_session_action = analysis_item
-                                    st.success("✅ Analiza zakończona i zapisana w bazie danych!")
+                                    st.success(SUCCESS_MESSAGES["analysis_saved"])
                                 else:
                                     st.error("❌ Nie udało się przeanalizować tekstu. Sprawdź czy tekst jest wystarczająco długi.")
                             except Exception as e:
@@ -1131,10 +1130,6 @@ def main():
         st.markdown("---")
         st.subheader("🔧 Historia poprawek")
         
-        # Debugowanie (usuń w produkcji)
-        # st.write(f"DEBUG: correction_history length: {len(st.session_state.correction_history)}")
-        # correction_items = [item for item in st.session_state.correction_history if item.get('mode') == 'correction']
-        # st.write(f"DEBUG: correction items found: {len(correction_items)}")
         
         if st.session_state.correction_history:
             # Filtruj tylko poprawki i weź ostatnie 5
@@ -1174,10 +1169,6 @@ def main():
         st.markdown("---")
         st.subheader("📊 Historia analiz")
         
-        # Debugowanie (usuń w produkcji)
-        # st.write(f"DEBUG: correction_history length: {len(st.session_state.correction_history)}")
-        # analysis_items = [item for item in st.session_state.correction_history if item.get('mode') == 'analysis']
-        # st.write(f"DEBUG: analysis items found: {len(analysis_items)}")
         
         if st.session_state.correction_history:
             # Filtruj tylko analizy i weź ostatnie 5
