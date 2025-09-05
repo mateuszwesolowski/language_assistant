@@ -829,6 +829,7 @@ def main():
                                 # Odśwież dane z bazy danych
                                 reload_data_from_db()
                                 st.success(SUCCESS_MESSAGES["translation_saved"])
+                                st.rerun()
                         elif "Poprawianie" in mode:
                             corrected = correct_text(input_text, target_language)
                             if corrected:
@@ -858,6 +859,7 @@ def main():
                                 # Odśwież dane z bazy danych
                                 reload_data_from_db()
                                 st.success(SUCCESS_MESSAGES["correction_saved"])
+                                st.rerun()
                         elif "Analiza" in mode:
                             try:
                                 analysis = analyze_text(input_text, target_language)
@@ -887,6 +889,7 @@ def main():
                                     # Odśwież dane z bazy danych
                                     reload_data_from_db()
                                     st.success(SUCCESS_MESSAGES["analysis_saved"])
+                                    st.rerun()
                                 else:
                                     st.error("❌ Nie udało się przeanalizować tekstu. Sprawdź czy tekst jest wystarczająco długi.")
                             except Exception as e:
