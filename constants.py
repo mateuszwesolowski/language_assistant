@@ -30,7 +30,6 @@ AUDIO_FORMAT = "wav"
 
 # UI
 DEFAULT_REFRESH_INTERVAL = 30  # seconds
-MAX_DISPLAY_ITEMS = 5
 
 # Exercise Types
 EXERCISE_TYPES = {

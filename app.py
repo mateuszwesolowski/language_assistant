@@ -1,36 +1,21 @@
 import streamlit as st
 import os
-from dotenv import load_dotenv
-import openai
 from datetime import datetime
 from text_corrector import correct_text, get_correction_explanation
 from grammar_helper import analyze_text, get_word_explanation
-from audio_generator import generate_audio, get_available_voices, get_voice_for_language, save_audio_file
+from audio_generator import generate_audio, get_available_voices, get_voice_for_language
 from database import LanguageHelperDB
 from file_handler import create_file_upload_widget
 from tutor_agent import TutorAgent
+from openai_client import get_global_openai_client
 from constants import (
     OPENAI_MODEL, OPENAI_MAX_TOKENS, OPENAI_TEMPERATURE,
-    DEFAULT_HISTORY_LIMIT, MAX_DISPLAY_ITEMS, DEFAULT_REFRESH_INTERVAL,
-    SUCCESS_MESSAGES, ERROR_MESSAGES
+    DEFAULT_HISTORY_LIMIT, SUCCESS_MESSAGES, ERROR_MESSAGES
 )
 from validators import validate_text_input, validate_language, sanitize_text
 
-# Ładowanie zmiennych środowiskowych
-load_dotenv()
-
-# Konfiguracja OpenAI - tylko jeśli klucz API jest dostępny
-client = None
-api_key = os.getenv("OPENAI_API_KEY")
-if api_key and api_key.strip():  # Sprawdź czy nie jest None i nie jest pustym stringiem
-    try:
-        client = openai.OpenAI(api_key=api_key)
-        print("✅ Klient OpenAI zainicjalizowany poprawnie")
-    except Exception as e:
-        print(f"❌ Błąd podczas inicjalizacji klienta OpenAI: {e}")
-        client = None
-else:
-    print("❌ Błąd: Brak klucza API OpenAI w zmiennych środowiskowych")
+# Konfiguracja OpenAI
+client = get_global_openai_client()
 
 # Konfiguracja strony
 st.set_page_config(

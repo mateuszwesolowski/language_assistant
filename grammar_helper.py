@@ -1,25 +1,10 @@
-import openai
-import os
-from dotenv import load_dotenv
 from typing import List, Dict
-import instructor
 from pydantic import BaseModel
+from openai_client import get_global_openai_client, get_global_instructor_client
 
-# Ładowanie zmiennych środowiskowych
-load_dotenv()
-
-# Konfiguracja OpenAI i instructor - tylko jeśli klucz API jest dostępny
-client = None
-instructor_client = None
-api_key = os.getenv("OPENAI_API_KEY")
-if api_key and api_key.strip():  # Sprawdź czy nie jest None i nie jest pustym stringiem
-    try:
-        client = openai.OpenAI(api_key=api_key)
-        instructor_client = instructor.patch(openai.OpenAI(api_key=api_key))
-    except Exception as e:
-        print(f"Błąd podczas inicjalizacji klienta OpenAI: {e}")
-        client = None
-        instructor_client = None
+# Konfiguracja OpenAI i instructor
+client = get_global_openai_client()
+instructor_client = get_global_instructor_client()
 
 class VocabularyItem(BaseModel):
     """Model dla elementu słownictwa"""

@@ -1,19 +1,7 @@
-import openai
-import os
-from dotenv import load_dotenv
+from openai_client import get_global_openai_client
 
-# Ładowanie zmiennych środowiskowych
-load_dotenv()
-
-# Konfiguracja OpenAI - tylko jeśli klucz API jest dostępny
-client = None
-api_key = os.getenv("OPENAI_API_KEY")
-if api_key and api_key.strip():  # Sprawdź czy nie jest None i nie jest pustym stringiem
-    try:
-        client = openai.OpenAI(api_key=api_key)
-    except Exception as e:
-        print(f"Błąd podczas inicjalizacji klienta OpenAI: {e}")
-        client = None
+# Konfiguracja OpenAI
+client = get_global_openai_client()
 
 def correct_text(text, language="angielski"):
     """
