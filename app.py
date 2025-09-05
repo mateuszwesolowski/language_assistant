@@ -573,60 +573,6 @@ def main():
                         st.session_state.open_exercise_archive = False
                         st.rerun()
         
-                # Wyświetl archiwum sesji czatu
-        if 'open_chat_archive' in st.session_state and st.session_state.open_chat_archive:
-            st.markdown("---")
-            st.subheader("📚 Archiwum sesji czatu")
-            
-            if st.session_state.chat_sessions_history:
-                for i, chat_session in enumerate(st.session_state.chat_sessions_history):  # Pokaż wszystkie
-                    with st.expander(f"Sesja z {chat_session['timestamp'].strftime('%d.%m.%Y %H:%M')} - {chat_session['language']} ({chat_session['message_count']} wiadomości)"):
-                        if chat_session.get('context'):
-                            st.info(f"**Kontekst:** {chat_session['context']}")
-                        
-                        # Wyświetl wiadomości
-                        messages = chat_session['chat_text'].split('\n')
-                        for message in messages:
-                            if message.strip():
-                                if message.startswith('user:'):
-                                    st.markdown(f"**👤 Ty:** {message[5:].strip()}")
-                                elif message.startswith('assistant:'):
-                                    st.markdown(f"**🎓 Korepetytor:** {message[10:].strip()}")
-                                st.markdown("---")
-                        
-                        col_load_chat, col_delete_chat = st.columns([3, 1])
-                        with col_load_chat:
-                            if st.button(f"💬 Wczytaj tę sesję", key=f"load_chat_session_{i}"):
-                                # Wczytaj wiadomości do aktualnego chatu
-                                st.session_state.chat_messages = []
-                                for message in messages:
-                                    if message.strip():
-                                        if message.startswith('user:'):
-                                            st.session_state.chat_messages.append({
-                                                'role': 'user',
-                                                'content': message[5:].strip(),
-                                                'timestamp': chat_session['timestamp']
-                                            })
-                                        elif message.startswith('assistant:'):
-                                            st.session_state.chat_messages.append({
-                                                'role': 'assistant',
-                                                'content': message[10:].strip(),
-                                                'timestamp': chat_session['timestamp']
-                                            })
-                                st.session_state.chat_context = chat_session.get('context', '')
-                                st.success("✅ Sesja wczytana!")
-                                st.rerun()
-                        with col_delete_chat:
-                            if st.button(f"🗑️ Usuń", key=f"delete_chat_session_{i}"):
-                                if db.delete_item(chat_session['id']):
-                                    st.success("✅ Sesja usunięta z archiwum!")
-                                    st.rerun()
-            else:
-                st.info("📭 Brak zapisanych sesji czatu w archiwum")
-            
-            if st.button("❌ Zamknij archiwum", key="close_chat_archive"):
-                st.session_state.open_chat_archive = False
-                st.rerun()
         
         # 3. SEKCJA CHATU Z KOREPETYTOREM
         elif subsection == "💬 Chat z korepetytorem":
@@ -719,6 +665,61 @@ def main():
                     st.session_state.chat_messages = []
                     st.session_state.chat_context = ""
                     st.success("✅ Chat wyczyszczony!")
+                    st.rerun()
+            
+            # Wyświetl archiwum sesji czatu - tylko w sekcji chatu
+            if 'open_chat_archive' in st.session_state and st.session_state.open_chat_archive:
+                st.markdown("---")
+                st.subheader("📚 Archiwum sesji czatu")
+                
+                if st.session_state.chat_sessions_history:
+                    for i, chat_session in enumerate(st.session_state.chat_sessions_history):  # Pokaż wszystkie
+                        with st.expander(f"Sesja z {chat_session['timestamp'].strftime('%d.%m.%Y %H:%M')} - {chat_session['language']} ({chat_session['message_count']} wiadomości)"):
+                            if chat_session.get('context'):
+                                st.info(f"**Kontekst:** {chat_session['context']}")
+                            
+                            # Wyświetl wiadomości
+                            messages = chat_session['chat_text'].split('\n')
+                            for message in messages:
+                                if message.strip():
+                                    if message.startswith('user:'):
+                                        st.markdown(f"**👤 Ty:** {message[5:].strip()}")
+                                    elif message.startswith('assistant:'):
+                                        st.markdown(f"**🎓 Korepetytor:** {message[10:].strip()}")
+                                    st.markdown("---")
+                            
+                            col_load_chat, col_delete_chat = st.columns([3, 1])
+                            with col_load_chat:
+                                if st.button(f"💬 Wczytaj tę sesję", key=f"load_chat_session_{i}"):
+                                    # Wczytaj wiadomości do aktualnego chatu
+                                    st.session_state.chat_messages = []
+                                    for message in messages:
+                                        if message.strip():
+                                            if message.startswith('user:'):
+                                                st.session_state.chat_messages.append({
+                                                    'role': 'user',
+                                                    'content': message[5:].strip(),
+                                                    'timestamp': chat_session['timestamp']
+                                                })
+                                            elif message.startswith('assistant:'):
+                                                st.session_state.chat_messages.append({
+                                                    'role': 'assistant',
+                                                    'content': message[10:].strip(),
+                                                    'timestamp': chat_session['timestamp']
+                                                })
+                                    st.session_state.chat_context = chat_session.get('context', '')
+                                    st.success("✅ Sesja wczytana!")
+                                    st.rerun()
+                            with col_delete_chat:
+                                if st.button(f"🗑️ Usuń", key=f"delete_chat_session_{i}"):
+                                    if db.delete_item(chat_session['id']):
+                                        st.success("✅ Sesja usunięta z archiwum!")
+                                        st.rerun()
+                else:
+                    st.info("📭 Brak zapisanych sesji czatu w archiwum")
+                
+                if st.button("❌ Zamknij archiwum", key="close_chat_archive"):
+                    st.session_state.open_chat_archive = False
                     st.rerun()
     
     else:
