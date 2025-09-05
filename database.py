@@ -22,6 +22,12 @@ class LanguageHelperDB:
         self.qdrant_api_key = os.getenv("QDRANT_API_KEY")
         self.collection_name = os.getenv("QDRANT_COLLECTION_NAME", QDRANT_DEFAULT_COLLECTION)
         
+        # Debug - sprawdź zmienne środowiskowe
+        print(f"🔍 DEBUG Qdrant config:")
+        print(f"   URL: {self.qdrant_url}")
+        print(f"   API Key: {'***' if self.qdrant_api_key else 'BRAK'}")
+        print(f"   Collection: {self.collection_name}")
+        
         # Inicjalizacja klienta Qdrant
         try:
             if self.qdrant_api_key:
@@ -63,6 +69,11 @@ class LanguageHelperDB:
     
     def save_translation(self, input_text, output_text, target_language, mode="translation", audio_data=None, voice=None):
         """Zapisuje tłumaczenie do bazy danych"""
+        print(f"🔍 DEBUG save_translation:")
+        print(f"   Client exists: {self.client is not None}")
+        print(f"   Input text: {input_text[:50]}...")
+        print(f"   Target language: {target_language}")
+        
         if not self.client:
             print("❌ Błąd: Brak połączenia z bazą danych Qdrant")
             return None
@@ -244,6 +255,14 @@ class LanguageHelperDB:
     
     def get_translations(self, limit=50):
         """Pobiera tłumaczenia z bazy danych"""
+        print(f"🔍 DEBUG get_translations:")
+        print(f"   Client exists: {self.client is not None}")
+        print(f"   Limit: {limit}")
+        
+        if not self.client:
+            print("❌ Błąd: Brak połączenia z bazą danych Qdrant")
+            return []
+        
         try:
             # Pobieranie punktów z bazy danych
             points = self.client.scroll(
@@ -253,9 +272,12 @@ class LanguageHelperDB:
                 with_vectors=False
             )[0]
             
+            print(f"🔍 DEBUG get_translations - pobrano {len(points)} punktów")
+            
             translations = []
             for point in points:
                 payload = point.payload
+                print(f"🔍 DEBUG punkt: mode={payload.get('mode')}, timestamp={payload.get('timestamp')}")
                 if payload.get("mode") == "translation":
                     # Konwersja audio z base64 jeśli istnieje
                     audio_data = None
@@ -277,6 +299,7 @@ class LanguageHelperDB:
             
             # Sortowanie po timestamp (najnowsze pierwsze)
             translations.sort(key=lambda x: x["timestamp"], reverse=True)
+            print(f"🔍 DEBUG get_translations - zwracam {len(translations)} tłumaczeń")
             return translations
             
         except Exception as e:
