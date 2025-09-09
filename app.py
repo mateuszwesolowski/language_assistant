@@ -106,8 +106,7 @@ def reload_data_from_db():
     except Exception as e:
         log_error(f"Błąd podczas ponownego ładowania danych z bazy: {str(e)}")
     
-    # Odśwież UI po załadowaniu danych
-    st.rerun()
+    # NIE wywołuj st.rerun() tutaj - to powoduje nieskończoną pętlę
 
 def translate_text(text, target_language="angielski"):
     """
@@ -258,6 +257,7 @@ def main():
         if st.button("🔄 Odśwież", key="refresh_history", help="Odśwież historię z bazy danych"):
             reload_data_from_db()
             st.success("✅ Historia została odświeżona z bazy danych!")
+            st.rerun()
     
     with col2:
         if st.button("🗑️ Wyczyść", key="clear_history", help="Wyczyść całą historię"):
@@ -352,6 +352,7 @@ def main():
                                 # Odśwież dane z bazy danych
                                 reload_data_from_db()
                                 st.success("✅ Wskazówki wygenerowane i zapisane w archiwum!")
+                                st.rerun()
                             else:
                                 st.error(f"❌ Błąd podczas generowania wskazówek: {tips[0] if tips else 'Nieznany błąd'}")
                 
@@ -454,6 +455,7 @@ def main():
                                 # Odśwież dane z bazy danych
                                 reload_data_from_db()
                                 st.success("✅ Ćwiczenie wygenerowane i zapisane w archiwum!")
+                                st.rerun()
                             else:
                                 st.error(f"❌ Błąd: {exercise['error']}")
                 
