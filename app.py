@@ -442,18 +442,14 @@ def main():
                                     analysis_data=exercise
                                 )
                                 
-                                # Zapisz ćwiczenie do sesji
-                                exercise_item = {
-                                    'id': db_id,
-                                    'timestamp': datetime.now(),
-                                    'exercise': exercise,
-                                    'language': target_language,
-                                    'mode': 'exercise'
-                                }
-                                st.session_state.correction_history.append(exercise_item)
-                                st.session_state.current_exercise = exercise_item
                                 # Odśwież dane z bazy danych
                                 reload_data_from_db()
+                                
+                                # Ustaw aktualne ćwiczenie - pobierz najnowsze ćwiczenie z historii
+                                exercise_items = [item for item in st.session_state.correction_history if item.get('mode') == 'exercise']
+                                if exercise_items:
+                                    st.session_state.current_exercise = exercise_items[0]
+                                
                                 st.success("✅ Ćwiczenie wygenerowane i zapisane w archiwum!")
                                 st.rerun()
                             else:
@@ -513,18 +509,14 @@ def main():
                                         analysis_data=new_exercise
                                     )
                                     
-                                    # Zapisz nowe ćwiczenie do sesji
-                                    new_exercise_item = {
-                                        'id': db_id,
-                                        'timestamp': datetime.now(),
-                                        'exercise': new_exercise,
-                                        'language': target_language,
-                                        'mode': 'exercise'
-                                    }
-                                    st.session_state.correction_history.append(new_exercise_item)
-                                    st.session_state.current_exercise = new_exercise_item
                                     # Odśwież dane z bazy danych
                                     reload_data_from_db()
+                                    
+                                    # Ustaw aktualne ćwiczenie - pobierz najnowsze ćwiczenie z historii
+                                    exercise_items = [item for item in st.session_state.correction_history if item.get('mode') == 'exercise']
+                                    if exercise_items:
+                                        st.session_state.current_exercise = exercise_items[0]
+                                    
                                     st.success("✅ Nowe ćwiczenie wygenerowane i zapisane!")
                                     st.rerun()
                                 else:
@@ -864,22 +856,13 @@ def main():
                                 )
                                 
                                 if db_id:
-                                    # Dodaj do sesji tylko jeśli zapisanie do bazy się powiodło
-                                    translation_item = {
-                                        'id': db_id,
-                                        'timestamp': datetime.now(),
-                                        'input': input_text,
-                                        'output': result,
-                                        'target_language': target_language,
-                                        'mode': 'translation',
-                                        'audio_data': audio_data,
-                                        'voice': voice
-                                    }
-                                    st.session_state.translation_history.append(translation_item)
-                                    # Ustaw aktualny wynik sesji
-                                    st.session_state.current_session_action = translation_item
                                     # Odśwież dane z bazy danych
                                     reload_data_from_db()
+                                    
+                                    # Ustaw aktualny wynik sesji - pobierz najnowsze tłumaczenie z historii
+                                    if st.session_state.translation_history:
+                                        st.session_state.current_session_action = st.session_state.translation_history[0]
+                                    
                                     st.success(SUCCESS_MESSAGES["translation_saved"])
                                     st.rerun()
                                 else:
@@ -898,21 +881,14 @@ def main():
                                 )
                                 
                                 if db_id:
-                                    # Dodaj do sesji tylko jeśli zapisanie do bazy się powiodło
-                                    correction_item = {
-                                        'id': db_id,
-                                        'timestamp': datetime.now(),
-                                        'input': input_text,
-                                        'output': corrected,
-                                        'explanation': explanation,
-                                        'language': target_language,
-                                        'mode': 'correction'
-                                    }
-                                    st.session_state.correction_history.append(correction_item)
-                                    # Ustaw aktualny wynik sesji
-                                    st.session_state.current_session_action = correction_item
                                     # Odśwież dane z bazy danych
                                     reload_data_from_db()
+                                    
+                                    # Ustaw aktualny wynik sesji - pobierz najnowszą poprawkę z historii
+                                    correction_items = [item for item in st.session_state.correction_history if item.get('mode') == 'correction']
+                                    if correction_items:
+                                        st.session_state.current_session_action = correction_items[0]
+                                    
                                     st.success(SUCCESS_MESSAGES["correction_saved"])
                                     st.rerun()
                                 else:
@@ -931,20 +907,14 @@ def main():
                                         analysis_data=analysis  # Przekaż dane analizy
                                     )
                                     
-                                    # Dodaj do sesji
-                                    analysis_item = {
-                                        'id': db_id,
-                                        'timestamp': datetime.now(),
-                                        'input': input_text,
-                                        'analysis': analysis,
-                                        'language': target_language,
-                                        'mode': 'analysis'
-                                    }
-                                    st.session_state.correction_history.append(analysis_item)
-                                    # Ustaw aktualny wynik sesji
-                                    st.session_state.current_session_action = analysis_item
                                     # Odśwież dane z bazy danych
                                     reload_data_from_db()
+                                    
+                                    # Ustaw aktualny wynik sesji - pobierz najnowszą analizę z historii
+                                    analysis_items = [item for item in st.session_state.correction_history if item.get('mode') == 'analysis']
+                                    if analysis_items:
+                                        st.session_state.current_session_action = analysis_items[0]
+                                    
                                     st.success(SUCCESS_MESSAGES["analysis_saved"])
                                     st.rerun()
                                 else:
