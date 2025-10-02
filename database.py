@@ -86,7 +86,7 @@ class LanguageHelperDB:
             
             # Przygotowanie metadanych
             metadata = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "input_text": input_text,
                 "output_text": output_text,
                 "target_language": target_language,
@@ -135,7 +135,7 @@ class LanguageHelperDB:
             
             # Przygotowanie metadanych
             metadata = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "input_text": input_text,
                 "output_text": output_text,
                 "language": language,
@@ -189,7 +189,7 @@ class LanguageHelperDB:
             
             # Przygotowanie metadanych
             metadata = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "language": language,
                 "context": context,
                 "mode": "chat_session"
@@ -233,7 +233,7 @@ class LanguageHelperDB:
             
             # Przygotowanie metadanych
             metadata = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "language": language,
                 "mode": "learning_tips"
             }
@@ -305,7 +305,7 @@ class LanguageHelperDB:
                     
                     translation = {
                         "id": point.id,
-                        "timestamp": datetime.fromisoformat(payload["timestamp"]),
+                        "timestamp": datetime.fromisoformat(payload["timestamp"]).replace(tzinfo=None),
                         "input": payload["input_text"],
                         "output": payload["output_text"],
                         "target_language": payload["target_language"],
@@ -352,7 +352,7 @@ class LanguageHelperDB:
                     # Podstawowe dane
                     item = {
                         "id": point.id,
-                        "timestamp": datetime.fromisoformat(payload["timestamp"]),
+                        "timestamp": datetime.fromisoformat(payload["timestamp"]).replace(tzinfo=None),
                         "input": payload["input_text"],
                         "output": payload["output_text"],
                         "language": payload["language"],
@@ -440,7 +440,7 @@ class LanguageHelperDB:
                 if payload.get("mode") == "chat_session":
                     chat_session = {
                         "id": point.id,
-                        "timestamp": datetime.fromisoformat(payload["timestamp"]),
+                        "timestamp": datetime.fromisoformat(payload["timestamp"]).replace(tzinfo=None),
                         "language": payload["language"],
                         "context": payload.get("context", ""),
                         "chat_text": payload["chat_text"],
@@ -484,7 +484,7 @@ class LanguageHelperDB:
                 if payload.get("mode") == "learning_tips":
                     tips_history_item = {
                         "id": point.id,
-                        "timestamp": datetime.fromisoformat(payload["timestamp"]),
+                        "timestamp": datetime.fromisoformat(payload["timestamp"]).replace(tzinfo=None),
                         "language": payload["language"],
                         "tips_text": payload["tips_text"],
                         "tips_count": payload["tips_count"],

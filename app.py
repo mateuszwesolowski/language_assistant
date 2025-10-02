@@ -1172,7 +1172,9 @@ def main():
                 # Wyświetl wszystkie tłumaczenia
                 for i, item in enumerate(reversed(st.session_state.translation_history)):
                     if item['mode'] == 'translation':
-                        with st.expander(f"Tłumaczenie {len(st.session_state.translation_history) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
+                        # Numeracja od 1, najnowsze na górze
+                        translation_number = i + 1
+                        with st.expander(f"Tłumaczenie {translation_number} - {item['timestamp'].strftime('%H:%M:%S')}"):
                             # Przycisk usuwania
                             col_delete, col_content = st.columns([1, 10])
                             with col_delete:
