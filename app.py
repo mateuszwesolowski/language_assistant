@@ -162,7 +162,8 @@ def main():
     - Obsługuje generowanie audio i plików
     """
     # Ładuj dane z bazy danych przy pierwszym uruchomieniu
-    load_data_from_db()
+    # Zawsze wymuszaj odświeżenie, aby upewnić się, że historia jest aktualna
+    load_data_from_db(force_reload=True)
     
     # Sidebar z opcjami
     st.sidebar.header("⚙️ Opcje")
