@@ -548,13 +548,27 @@ def main():
                     st.markdown("---")
                     st.subheader("📚 Archiwum ćwiczeń")
                     
+                    # Inicjalizacja paginacji dla ćwiczeń
+                    if 'exercise_page' not in st.session_state:
+                        st.session_state.exercise_page = 0
+                    
                     # Filtruj ćwiczenia z historii
                     exercise_history = [item for item in st.session_state.correction_history if item.get('mode') == 'exercise']
+                    items_per_page = 5
+                    total_pages = (len(exercise_history) + items_per_page - 1) // items_per_page
                     
                     if exercise_history:
-                        for i, exercise_item in enumerate(exercise_history):  # Pokaż wszystkie
+                        # Oblicz zakres dla aktualnej strony
+                        start_idx = st.session_state.exercise_page * items_per_page
+                        end_idx = min(start_idx + items_per_page, len(exercise_history))
+                        page_items = exercise_history[start_idx:end_idx]
+                        
+                        # Wyświetl ćwiczenia dla aktualnej strony
+                        for i, exercise_item in enumerate(page_items):
                             exercise = exercise_item['exercise']
-                            with st.expander(f"Ćwiczenie z {exercise_item['timestamp'].strftime('%d.%m.%Y %H:%M')} - {exercise.get('title', 'Ćwiczenie')}"):
+                            # Numeracja globalna (od najnowszego)
+                            global_number = start_idx + i + 1
+                            with st.expander(f"Ćwiczenie {global_number} - {exercise_item['timestamp'].strftime('%d.%m.%Y %H:%M')} - {exercise.get('title', 'Ćwiczenie')}"):
                                 st.markdown(f"**🎯 {exercise.get('title', 'Ćwiczenie')}**")
                                 st.info(exercise.get('description', ''))
                                 st.markdown(f"**❓ Pytanie:** {exercise.get('question', '')}")
@@ -575,6 +589,24 @@ def main():
                                         if db.delete_item(exercise_item['id']):
                                             st.success("✅ Ćwiczenie usunięte z archiwum!")
                                             st.rerun()
+                        
+                        # Guziki nawigacji dla ćwiczeń
+                        if total_pages > 1:
+                            st.markdown("---")
+                            col_prev, col_info, col_next = st.columns([1, 2, 1])
+                            
+                            with col_prev:
+                                if st.button("⬅️ Poprzednie", key="exercise_prev", disabled=st.session_state.exercise_page == 0):
+                                    st.session_state.exercise_page -= 1
+                                    st.rerun()
+                            
+                            with col_info:
+                                st.info(f"Strona {st.session_state.exercise_page + 1} z {total_pages} ({len(exercise_history)} ćwiczeń)")
+                            
+                            with col_next:
+                                if st.button("Następne ➡️", key="exercise_next", disabled=st.session_state.exercise_page >= total_pages - 1):
+                                    st.session_state.exercise_page += 1
+                                    st.rerun()
                     else:
                         st.info("📭 Brak zapisanych ćwiczeń w archiwum")
                     
@@ -1169,12 +1201,26 @@ def main():
                 st.markdown("---")
                 st.subheader("📚 Historia tłumaczeń")
                 
-                # Wyświetl wszystkie tłumaczenia
-                for i, item in enumerate(reversed(st.session_state.translation_history)):
-                    if item['mode'] == 'translation':
-                        # Numeracja od 1, najnowsze na górze
-                        translation_number = i + 1
-                        with st.expander(f"Tłumaczenie {translation_number} - {item['timestamp'].strftime('%H:%M:%S')}"):
+                # Inicjalizacja paginacji dla tłumaczeń
+                if 'translation_page' not in st.session_state:
+                    st.session_state.translation_page = 0
+                
+                # Filtruj tylko tłumaczenia
+                translation_items = [item for item in st.session_state.translation_history if item.get('mode') == 'translation']
+                items_per_page = 5
+                total_pages = (len(translation_items) + items_per_page - 1) // items_per_page
+                
+                if translation_items:
+                    # Oblicz zakres dla aktualnej strony
+                    start_idx = st.session_state.translation_page * items_per_page
+                    end_idx = min(start_idx + items_per_page, len(translation_items))
+                    page_items = translation_items[start_idx:end_idx]
+                    
+                    # Wyświetl tłumaczenia dla aktualnej strony
+                    for i, item in enumerate(page_items):
+                        # Numeracja globalna (od najnowszego)
+                        global_number = start_idx + i + 1
+                        with st.expander(f"Tłumaczenie {global_number} - {item['timestamp'].strftime('%d.%m.%Y %H:%M')}"):
                             # Przycisk usuwania
                             col_delete, col_content = st.columns([1, 10])
                             with col_delete:
@@ -1224,6 +1270,26 @@ def main():
                                 )
                             else:
                                 st.info("🔇 Audio nie jest dostępne dla tego tłumaczenia")
+                    
+                    # Guziki nawigacji dla tłumaczeń
+                    if total_pages > 1:
+                        st.markdown("---")
+                        col_prev, col_info, col_next = st.columns([1, 2, 1])
+                        
+                        with col_prev:
+                            if st.button("⬅️ Poprzednie", key="translation_prev", disabled=st.session_state.translation_page == 0):
+                                st.session_state.translation_page -= 1
+                                st.rerun()
+                        
+                        with col_info:
+                            st.info(f"Strona {st.session_state.translation_page + 1} z {total_pages} ({len(translation_items)} tłumaczeń)")
+                        
+                        with col_next:
+                            if st.button("Następne ➡️", key="translation_next", disabled=st.session_state.translation_page >= total_pages - 1):
+                                st.session_state.translation_page += 1
+                                st.rerun()
+                else:
+                    st.info("📭 Brak zapisanych tłumaczeń w historii")
         
         elif "Poprawianie" in mode:
             # Historia poprawek - tylko w sekcji poprawek
@@ -1231,37 +1297,73 @@ def main():
                 st.markdown("---")
                 st.subheader("🔧 Historia poprawek")
                 
-                # Filtruj tylko poprawki i wyświetl wszystkie
+                # Inicjalizacja paginacji dla poprawek
+                if 'correction_page' not in st.session_state:
+                    st.session_state.correction_page = 0
+                
+                # Filtruj tylko poprawki
                 correction_items = [item for item in st.session_state.correction_history if item.get('mode') == 'correction']
-                for i, item in enumerate(reversed(correction_items)):
-                    with st.expander(f"Poprawka {len(correction_items) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
-                        # Przycisk usuwania
-                        col_delete, col_content = st.columns([1, 10])
-                        with col_delete:
-                            delete_key = f"delete_correction_{item.get('id', i)}_{i}"
-                            
-                            if st.button("🗑️", key=delete_key, help="Usuń z bazy danych (natychmiastowe)"):
-                                if 'id' in item:
-                                    if db.delete_item(item['id']):
-                                        st.session_state.correction_history.remove(item)
-                                        st.success("✅ Usunięto z bazy danych!")
+                items_per_page = 5
+                total_pages = (len(correction_items) + items_per_page - 1) // items_per_page
+                
+                if correction_items:
+                    # Oblicz zakres dla aktualnej strony
+                    start_idx = st.session_state.correction_page * items_per_page
+                    end_idx = min(start_idx + items_per_page, len(correction_items))
+                    page_items = correction_items[start_idx:end_idx]
+                    
+                    # Wyświetl poprawki dla aktualnej strony
+                    for i, item in enumerate(page_items):
+                        # Numeracja globalna (od najnowszego)
+                        global_number = start_idx + i + 1
+                        with st.expander(f"Poprawka {global_number} - {item['timestamp'].strftime('%d.%m.%Y %H:%M')}"):
+                            # Przycisk usuwania
+                            col_delete, col_content = st.columns([1, 10])
+                            with col_delete:
+                                delete_key = f"delete_correction_{item.get('id', i)}_{i}"
+                                
+                                if st.button("🗑️", key=delete_key, help="Usuń z bazy danych (natychmiastowe)"):
+                                    if 'id' in item:
+                                        if db.delete_item(item['id']):
+                                            st.session_state.correction_history.remove(item)
+                                            st.success("✅ Usunięto z bazy danych!")
+                                        else:
+                                            st.error("❌ Błąd podczas usuwania z bazy danych")
                                     else:
-                                        st.error("❌ Błąd podczas usuwania z bazy danych")
-                                else:
-                                    # Usuń tylko z sesji jeśli nie ma ID
-                                    st.session_state.correction_history.remove(item)
-                                    st.success("✅ Usunięto z historii!")
-                        with col_content:
-                            col_a, col_b = st.columns(2)
-                            with col_a:
-                                st.markdown("**Oryginalny:**")
-                                st.write(item['input'])
-                            with col_b:
-                                st.markdown("**Poprawiony:**")
-                                st.write(item['output'])
-                            
-                            st.markdown("**Wyjaśnienie poprawek:**")
-                            st.write(item['explanation'])
+                                        # Usuń tylko z sesji jeśli nie ma ID
+                                        st.session_state.correction_history.remove(item)
+                                        st.success("✅ Usunięto z historii!")
+                            with col_content:
+                                col_a, col_b = st.columns(2)
+                                with col_a:
+                                    st.markdown("**Oryginalny:**")
+                                    st.write(item['input'])
+                                with col_b:
+                                    st.markdown("**Poprawiony:**")
+                                    st.write(item['output'])
+                                
+                                st.markdown("**Wyjaśnienie poprawek:**")
+                                st.write(item['explanation'])
+                    
+                    # Guziki nawigacji dla poprawek
+                    if total_pages > 1:
+                        st.markdown("---")
+                        col_prev, col_info, col_next = st.columns([1, 2, 1])
+                        
+                        with col_prev:
+                            if st.button("⬅️ Poprzednie", key="correction_prev", disabled=st.session_state.correction_page == 0):
+                                st.session_state.correction_page -= 1
+                                st.rerun()
+                        
+                        with col_info:
+                            st.info(f"Strona {st.session_state.correction_page + 1} z {total_pages} ({len(correction_items)} poprawek)")
+                        
+                        with col_next:
+                            if st.button("Następne ➡️", key="correction_next", disabled=st.session_state.correction_page >= total_pages - 1):
+                                st.session_state.correction_page += 1
+                                st.rerun()
+                else:
+                    st.info("📭 Brak zapisanych poprawek w historii")
         
         elif "Analiza" in mode:
             # Historia analiz - tylko w sekcji analiz
@@ -1269,64 +1371,100 @@ def main():
                 st.markdown("---")
                 st.subheader("📊 Historia analiz")
                 
-                # Filtruj tylko analizy i wyświetl wszystkie
+                # Inicjalizacja paginacji dla analiz
+                if 'analysis_page' not in st.session_state:
+                    st.session_state.analysis_page = 0
+                
+                # Filtruj tylko analizy
                 analysis_items = [item for item in st.session_state.correction_history if item.get('mode') == 'analysis']
-                for i, item in enumerate(reversed(analysis_items)):
-                    with st.expander(f"Analiza {len(analysis_items) - i} - {item['timestamp'].strftime('%H:%M:%S')}"):
-                        # Przycisk usuwania
-                        col_delete, col_content = st.columns([1, 10])
-                        with col_delete:
-                            delete_key = f"delete_analysis_{item.get('id', i)}_{i}"
-                            
-                            if st.button("🗑️", key=delete_key, help="Usuń z bazy danych (natychmiastowe)"):
-                                if 'id' in item:
-                                    if db.delete_item(item['id']):
-                                        st.session_state.correction_history.remove(item)
-                                        st.success("✅ Usunięto z bazy danych!")
+                items_per_page = 5
+                total_pages = (len(analysis_items) + items_per_page - 1) // items_per_page
+                
+                if analysis_items:
+                    # Oblicz zakres dla aktualnej strony
+                    start_idx = st.session_state.analysis_page * items_per_page
+                    end_idx = min(start_idx + items_per_page, len(analysis_items))
+                    page_items = analysis_items[start_idx:end_idx]
+                    
+                    # Wyświetl analizy dla aktualnej strony
+                    for i, item in enumerate(page_items):
+                        # Numeracja globalna (od najnowszego)
+                        global_number = start_idx + i + 1
+                        with st.expander(f"Analiza {global_number} - {item['timestamp'].strftime('%d.%m.%Y %H:%M')}"):
+                            # Przycisk usuwania
+                            col_delete, col_content = st.columns([1, 10])
+                            with col_delete:
+                                delete_key = f"delete_analysis_{item.get('id', i)}_{i}"
+                                
+                                if st.button("🗑️", key=delete_key, help="Usuń z bazy danych (natychmiastowe)"):
+                                    if 'id' in item:
+                                        if db.delete_item(item['id']):
+                                            st.session_state.correction_history.remove(item)
+                                            st.success("✅ Usunięto z bazy danych!")
+                                        else:
+                                            st.error("❌ Błąd podczas usuwania z bazy danych")
                                     else:
-                                        st.error("❌ Błąd podczas usuwania z bazy danych")
-                                else:
-                                    # Usuń tylko z sesji jeśli nie ma ID
-                                    st.session_state.correction_history.remove(item)
-                                    st.success("✅ Usunięto z historii!")
-                        with col_content:
-                            st.markdown("**Analizowany tekst:**")
-                            st.write(item['input'])
-                            st.markdown(f"**Język:** {item['language']}")
+                                        # Usuń tylko z sesji jeśli nie ma ID
+                                        st.session_state.correction_history.remove(item)
+                                        st.success("✅ Usunięto z historii!")
+                            with col_content:
+                                st.markdown("**Analizowany tekst:**")
+                                st.write(item['input'])
+                                st.markdown(f"**Język:** {item['language']}")
                             
-                            # Wyświetl analizę jeśli jest dostępna
-                            if 'analysis' in item and item['analysis']:
-                                analysis = item['analysis']
-                                
-                                # Słownictwo
-                                if hasattr(analysis, 'vocabulary_items') and analysis.vocabulary_items:
-                                    st.markdown("**📚 Słownictwo:**")
-                                    for vocab_item in analysis.vocabulary_items[:3]:  # Pokaż więcej elementów
-                                        st.markdown(f"**• {vocab_item.word}** - {vocab_item.translation}")
-                                        st.write(f"  Część mowy: {vocab_item.part_of_speech}")
-                                        st.write(f"  Przykład: {vocab_item.example_sentence}")
-                                        st.write(f"  Poziom: {vocab_item.difficulty_level}")
-                                        st.markdown("---")
-                                
-                                # Reguły gramatyczne
-                                if hasattr(analysis, 'grammar_rules') and analysis.grammar_rules:
-                                    st.markdown("**📖 Reguły gramatyczne:**")
-                                    for rule in analysis.grammar_rules[:2]:  # Pokaż więcej reguł
-                                        st.markdown(f"**• {rule.rule_name}**")
-                                        st.write(f"  Wyjaśnienie: {rule.explanation}")
-                                        st.write("  Przykłady:")
-                                        for example in rule.examples[:3]:
-                                            st.write(f"    - {example}")
-                                        st.write(f"  Poziom: {rule.difficulty_level}")
-                                        st.markdown("---")
-                                
-                                # Wskazówki do nauki
-                                if hasattr(analysis, 'learning_tips') and analysis.learning_tips:
-                                    st.markdown("**💡 Wskazówki do nauki:**")
-                                    for tip in analysis.learning_tips[:3]:  # Pokaż więcej wskazówek
-                                        st.write(f"• {tip}")
-                            else:
-                                st.info("📊 Analiza nie jest dostępna dla tego wpisu")
+                                # Wyświetl analizę jeśli jest dostępna
+                                if 'analysis' in item and item['analysis']:
+                                    analysis = item['analysis']
+                                    
+                                    # Słownictwo
+                                    if hasattr(analysis, 'vocabulary_items') and analysis.vocabulary_items:
+                                        st.markdown("**📚 Słownictwo:**")
+                                        for vocab_item in analysis.vocabulary_items[:3]:  # Pokaż więcej elementów
+                                            st.markdown(f"**• {vocab_item.word}** - {vocab_item.translation}")
+                                            st.write(f"  Część mowy: {vocab_item.part_of_speech}")
+                                            st.write(f"  Przykład: {vocab_item.example_sentence}")
+                                            st.write(f"  Poziom: {vocab_item.difficulty_level}")
+                                            st.markdown("---")
+                                    
+                                    # Reguły gramatyczne
+                                    if hasattr(analysis, 'grammar_rules') and analysis.grammar_rules:
+                                        st.markdown("**📖 Reguły gramatyczne:**")
+                                        for rule in analysis.grammar_rules[:2]:  # Pokaż więcej reguł
+                                            st.markdown(f"**• {rule.rule_name}**")
+                                            st.write(f"  Wyjaśnienie: {rule.explanation}")
+                                            st.write("  Przykłady:")
+                                            for example in rule.examples[:3]:
+                                                st.write(f"    - {example}")
+                                            st.write(f"  Poziom: {rule.difficulty_level}")
+                                            st.markdown("---")
+                                    
+                                    # Wskazówki do nauki
+                                    if hasattr(analysis, 'learning_tips') and analysis.learning_tips:
+                                        st.markdown("**💡 Wskazówki do nauki:**")
+                                        for tip in analysis.learning_tips[:3]:  # Pokaż więcej wskazówek
+                                            st.write(f"• {tip}")
+                                else:
+                                    st.info("📊 Analiza nie jest dostępna dla tego wpisu")
+                    
+                    # Guziki nawigacji dla analiz
+                    if total_pages > 1:
+                        st.markdown("---")
+                        col_prev, col_info, col_next = st.columns([1, 2, 1])
+                        
+                        with col_prev:
+                            if st.button("⬅️ Poprzednie", key="analysis_prev", disabled=st.session_state.analysis_page == 0):
+                                st.session_state.analysis_page -= 1
+                                st.rerun()
+                        
+                        with col_info:
+                            st.info(f"Strona {st.session_state.analysis_page + 1} z {total_pages} ({len(analysis_items)} analiz)")
+                        
+                        with col_next:
+                            if st.button("Następne ➡️", key="analysis_next", disabled=st.session_state.analysis_page >= total_pages - 1):
+                                st.session_state.analysis_page += 1
+                                st.rerun()
+                else:
+                    st.info("📭 Brak zapisanych analiz w historii")
     
     # Historia jest teraz wyświetlana w każdej sekcji osobno
     
